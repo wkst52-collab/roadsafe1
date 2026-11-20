@@ -1,0 +1,2220 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>香港交通安全隊｜道路安全專章互動教學模擬器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    body {
+      background: linear-gradient(135deg, #e0f2fe 0%, #fef9c3 50%, #dcfce7 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    /* 觸控按鈕彈性效果 */
+    .touch-btn {
+      min-height: 48px;
+      transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease;
+      cursor: pointer;
+    }
+    .touch-btn:active {
+      transform: scale(0.95);
+    }
+    /* 綠燈閃爍動畫 */
+    @keyframes greenBlink {
+      0%, 49% { opacity: 1; filter: drop-shadow(0 0 12px #22c55e); }
+      50%, 100% { opacity: 0.2; filter: none; }
+    }
+    .blink-green {
+      animation: greenBlink 0.7s infinite;
+    }
+    /* 震動器動畫 */
+    @keyframes vibrate {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px) rotate(-2deg); }
+      75% { transform: translateX(3px) rotate(2deg); }
+    }
+    .vibrating {
+      animation: vibrate 0.15s infinite;
+    }
+    /* 廣東話朗讀聲波跳動動畫 */
+    @keyframes pulseSpeak {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+      50% { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+    }
+    .speaking-active {
+      animation: pulseSpeak 1s infinite;
+      background-color: #f59e0b !important;
+      color: #0f172a !important;
+      border-color: #b45309 !important;
+    }
+    /* 拖拉項目樣式 */
+    .drag-card {
+      touch-action: none;
+      cursor: grab;
+    }
+    .drag-card.selected-item {
+      ring: 4px solid #f59e0b;
+      transform: scale(1.03);
+      box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.5);
+    }
+    .drop-zone.highlight-zone {
+      border-color: #f59e0b !important;
+      background-color: #fef3c7 !important;
+    }
+    /* 隱藏捲軸但保留滾動 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="text-slate-800 pb-12">
+
+  <!-- 頂部品牌標題列 -->
+  <header class="bg-gradient-to-r from-sky-700 via-blue-700 to-indigo-800 text-white shadow-xl sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <!-- 香港交通安全隊隊徽 SVG -->
+        <div class="w-12 h-12 rounded-2xl bg-white p-1 shadow-md flex items-center justify-center shrink-0">
+          <svg viewBox="0 0 100 100" class="w-full h-full">
+            <circle cx="50" cy="50" r="46" fill="#0284c7" stroke="#facc15" stroke-width="5"/>
+            <path d="M50 14 C38 24, 38 40, 50 48 C62 40, 62 24, 50 14 Z" fill="#ec4899"/>
+            <rect x="40" y="34" width="20" height="42" rx="6" fill="#1e293b"/>
+            <circle cx="50" cy="44" r="5" fill="#ef4444"/>
+            <circle cx="50" cy="55" r="5" fill="#facc15"/>
+            <circle cx="50" cy="66" r="5" fill="#22c55e"/>
+            <path d="M22 76 Q50 92 78 76" fill="none" stroke="#ef4444" stroke-width="8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="bg-amber-400 text-slate-900 text-xs font-black px-2.5 py-0.5 rounded-full">香港交通安全隊（小學組）</span>
+            <span class="hidden sm:inline text-xs text-sky-200 font-bold">Road Safety Patrol</span>
+          </div>
+          <h1 class="text-lg sm:text-2xl font-black tracking-wide">道路安全專章｜互動教學模擬器</h1>
+        </div>
+      </div>
+
+      <!-- 音效開關與學習進度 -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div class="bg-white/15 backdrop-blur px-3 py-1.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5">
+          <span>⭐ 學習積分：</span>
+          <span id="global-stars" class="text-amber-300 text-base sm:text-lg font-black">0</span>
+        </div>
+        <!-- 廣東話語音導讀開關與測試 -->
+        <button id="tts-toggle-btn" onclick="toggleTTS()" class="touch-btn bg-amber-400 hover:bg-amber-300 text-slate-900 px-3.5 py-2 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1.5 shadow">
+          <span id="tts-icon">🗣️</span>
+          <span id="tts-text">廣東話讀題：開</span>
+        </button>
+        <button id="tts-stop-btn" onclick="stopCantonese()" class="hidden touch-btn bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1 shadow">
+          <span>⏹️ 停止朗讀</span>
+        </button>
+        <button id="mute-btn" onclick="toggleAudio()" class="touch-btn bg-white/20 hover:bg-white/30 active:bg-white/40 px-3.5 py-2 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-1.5 border border-white/30">
+          <span id="mute-icon">🔊</span>
+          <span id="mute-text" class="hidden sm:inline">音效開啟</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 五大站點導覽列 (iPad 觸控大按鈕) -->
+    <nav class="bg-sky-900/90 border-t border-white/15 overflow-x-auto no-scrollbar">
+      <div class="max-w-6xl mx-auto px-3 py-2 flex gap-2 min-w-max">
+        <button onclick="switchStation(1)" id="nav-btn-1" class="nav-tab touch-btn px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base flex items-center gap-2 bg-amber-400 text-slate-900 shadow-md">
+          <span>🚶</span> 第一站：行人安全大挑戰
+        </button>
+        <button onclick="switchStation(2)" id="nav-btn-2" class="nav-tab touch-btn px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base flex items-center gap-2 bg-white/10 text-white hover:bg-white/20">
+          <span>🚦</span> 第二站：過路設施與守則
+        </button>
+        <button onclick="switchStation(3)" id="nav-btn-3" class="nav-tab touch-btn px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base flex items-center gap-2 bg-white/10 text-white hover:bg-white/20">
+          <span>🛑</span> 第三站：交通標誌配對館
+        </button>
+        <button onclick="switchStation(4)" id="nav-btn-4" class="nav-tab touch-btn px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base flex items-center gap-2 bg-white/10 text-white hover:bg-white/20">
+          <span>🚌</span> 第四站：乘客安全守護者
+        </button>
+        <button onclick="switchStation(5)" id="nav-btn-5" class="nav-tab touch-btn px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base flex items-center gap-2 bg-rose-500 text-white hover:bg-rose-600 shadow-md">
+          <span>🏆</span> 第五站：專章模擬大考場
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- 主內容容器 -->
+  <main class="max-w-6xl mx-auto px-3 sm:px-6 pt-6">
+
+    <!-- ========================================================= -->
+    <!-- 第一站：行人安全大挑戰                                      -->
+    <!-- ========================================================= -->
+    <section id="station-1" class="station-panel space-y-6">
+      <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border-4 border-sky-200">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <span class="bg-sky-100 text-sky-800 font-black px-3 py-1 rounded-full text-sm">第一站｜基礎行人安全</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mt-1">1. 安全 vs 危險 情境判斷卡</h2>
+          </div>
+          <div class="bg-amber-100 text-amber-900 px-4 py-2 rounded-2xl font-bold text-sm">
+            👆 點擊卡片下方的「✓ 安全」或「✗ 危險」進行挑戰！
+          </div>
+        </div>
+
+        <div id="pedestrian-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <!-- 由 JS 動態生成 6 張情境判斷卡 -->
+        </div>
+      </div>
+
+      <!-- 夜間與雨天變裝互動模擬器 -->
+      <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border-4 border-indigo-200">
+        <div class="mb-4">
+          <span class="bg-indigo-100 text-indigo-800 font-black px-3 py-1 rounded-full text-sm">第一站｜能見度與天氣實驗室</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mt-1">2. 夜間及雨天穿衣與雨具模擬器</h2>
+          <p class="text-slate-600 font-bold mt-1">切換不同天氣時間，替小隊員選擇衣物和雨具，看看司機叔叔能不能清楚看到你！</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <!-- 左側互動控制面板 -->
+          <div class="lg:col-span-5 space-y-4 bg-slate-50 p-5 rounded-3xl border-2 border-slate-200">
+            <div>
+              <label class="block text-sm font-black text-slate-600 mb-2">步驟 A：選擇時間與天氣</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button onclick="setWeather('day')" id="w-day" class="touch-btn py-2.5 px-2 rounded-2xl font-black text-sm bg-amber-400 text-slate-900 shadow">☀️ 白天晴朗</button>
+                <button onclick="setWeather('night')" id="w-night" class="touch-btn py-2.5 px-2 rounded-2xl font-black text-sm bg-white border-2 border-slate-300 text-slate-700">🌙 夜間/昏暗</button>
+                <button onclick="setWeather('rain')" id="w-rain" class="touch-btn py-2.5 px-2 rounded-2xl font-black text-sm bg-white border-2 border-slate-300 text-slate-700">🌧️ 下雨天</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-black text-slate-600 mb-2">步驟 B：選擇衣服顏色</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="setClothes('dark')" id="c-dark" class="touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-slate-800 text-white shadow">⬛ 深黑色衣服</button>
+                <button onclick="setClothes('bright')" id="c-bright" class="touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-white border-2 border-slate-300 text-slate-700">⬜ 淺色/反光衣物</button>
+              </div>
+            </div>
+
+            <div id="umbrella-control" class="hidden">
+              <label class="block text-sm font-black text-slate-600 mb-2">步驟 C：選擇雨傘款式</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="setUmbrella('dark')" id="u-dark" class="touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-slate-700 text-white shadow">☂️ 深色大傘遮臉</button>
+                <button onclick="setUmbrella('clear')" id="u-clear" class="touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-white border-2 border-slate-300 text-slate-700">🌂 淺色透明不擋視線</button>
+              </div>
+            </div>
+
+            <!-- 即時安全評估結果 -->
+            <div id="visibility-feedback" class="p-4 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-900 font-bold text-base">
+              <!-- JS 更新 -->
+            </div>
+          </div>
+
+          <!-- 右側即時視覺化畫布 -->
+          <div class="lg:col-span-7">
+            <div id="weather-stage" class="rounded-3xl overflow-hidden border-4 border-slate-700 shadow-lg relative transition-colors duration-500 bg-sky-300">
+              <svg viewBox="0 0 600 320" class="w-full h-auto block">
+                <!-- 天空背景 -->
+                <rect id="sim-sky" x="0" y="0" width="600" height="220" fill="#7dd3fc"/>
+                <!-- 太陽/月亮 -->
+                <circle id="sim-celestial" cx="510" cy="60" r="32" fill="#facc15"/>
+                <!-- 遠處建築 -->
+                <rect x="30" y="90" width="80" height="130" fill="#94a3b8" opacity="0.5"/>
+                <rect x="130" y="60" width="100" height="160" fill="#64748b" opacity="0.5"/>
+                <rect x="420" y="100" width="120" height="120" fill="#94a3b8" opacity="0.5"/>
+                <!-- 馬路與行人路 -->
+                <rect x="0" y="210" width="600" height="25" fill="#cbd5e1"/>
+                <rect x="0" y="235" width="600" height="85" fill="#334155"/>
+                <line x1="0" y1="278" x2="600" y2="278" stroke="#f8fafc" stroke-width="4" stroke-dasharray="28 20"/>
+                <!-- 車燈光束 (夜間/雨天顯示) -->
+                <polygon id="sim-headlight" points="145,255 360,185 360,295" fill="url(#beamGrad)" opacity="0"/>
+                <defs>
+                  <linearGradient id="beamGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#fef08a" stop-opacity="0.85"/>
+                    <stop offset="100%" stop-color="#fef08a" stop-opacity="0.05"/>
+                  </linearGradient>
+                </defs>
+                <!-- 小汽車 -->
+                <g transform="translate(30, 222)">
+                  <rect x="10" y="18" width="110" height="32" rx="10" fill="#ef4444"/>
+                  <path d="M28 18 L42 3 L85 3 L102 18 Z" fill="#dc2626"/>
+                  <rect x="45" y="7" width="36" height="10" rx="2" fill="#bae6fd"/>
+                  <circle cx="32" cy="50" r="12" fill="#0f172a"/><circle cx="32" cy="50" r="5" fill="#cbd5e1"/>
+                  <circle cx="98" cy="50" r="12" fill="#0f172a"/><circle cx="98" cy="50" r="5" fill="#cbd5e1"/>
+                  <circle cx="118" cy="30" r="5" fill="#fef08a"/>
+                </g>
+                <!-- 小隊員角色 -->
+                <g id="sim-kid" transform="translate(310, 125)">
+                  <!-- 腿 -->
+                  <rect x="22" y="75" width="10" height="28" rx="4" fill="#fed7aa"/>
+                  <rect x="38" y="75" width="10" height="28" rx="4" fill="#fed7aa"/>
+                  <!-- 身體衣物 -->
+                  <rect id="sim-shirt" x="16" y="38" width="38" height="42" rx="10" fill="#1e293b"/>
+                  <!-- 反光條 -->
+                  <g id="sim-reflector" opacity="0">
+                    <rect x="16" y="50" width="38" height="6" fill="#fef08a"/>
+                    <rect x="16" y="64" width="38" height="6" fill="#fef08a"/>
+                  </g>
+                  <!-- 頭 -->
+                  <circle cx="35" cy="20" r="16" fill="#fed7aa"/>
+                  <path d="M19 16 C19 4, 51 4, 51 16 Z" fill="#1e293b"/>
+                  <circle cx="29" cy="19" r="2.2" fill="#0f172a"/>
+                  <circle cx="41" cy="19" r="2.2" fill="#0f172a"/>
+                  <path d="M30 26 Q35 30 40 26" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+                  <!-- 雨傘 -->
+                  <g id="sim-umbrella" opacity="0">
+                    <line x1="55" y1="55" x2="55" y2="-12" stroke="#475569" stroke-width="4"/>
+                    <path id="sim-umbrella-canopy" d="M5 12 Q55 -35 105 12 Z" fill="#1e3a8a" stroke="#0f172a" stroke-width="2"/>
+                  </g>
+                </g>
+                <!-- 雨滴層 -->
+                <g id="sim-rain-drops" opacity="0" stroke="#bae6fd" stroke-width="2.5" stroke-linecap="round">
+                  <line x1="80" y1="20" x2="70" y2="45"/><line x1="160" y1="40" x2="150" y2="65"/>
+                  <line x1="250" y1="15" x2="240" y2="40"/><line x1="340" y1="30" x2="330" y2="55"/>
+                  <line x1="440" y1="20" x2="430" y2="45"/><line x1="530" y1="45" x2="520" y2="70"/>
+                  <line x1="120" y1="110" x2="110" y2="135"/><line x1="290" y1="95" x2="280" y2="120"/>
+                  <line x1="470" y1="115" x2="460" y2="140"/>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 第二站：過路設施與守則                                    -->
+    <!-- ========================================================= -->
+    <section id="station-2" class="station-panel hidden space-y-6">
+      <!-- 互動模組 1：人像燈過路模擬器 + 電子發聲裝置 -->
+      <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border-4 border-emerald-200">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <span class="bg-emerald-100 text-emerald-800 font-black px-3 py-1 rounded-full text-sm">第二站｜人像燈與電子發聲裝置</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mt-1">1. 人像燈過路模擬器（點擊聽聲效！）</h2>
+          </div>
+          <div class="bg-rose-100 text-rose-800 px-3.5 py-1.5 rounded-2xl font-black text-sm">
+            📏 緊記：在過路設施 15 米範圍內，必須使用該設施！
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <!-- 人像燈與控制器 SVG 互動區 -->
+          <div class="lg:col-span-5 bg-slate-900 rounded-3xl p-5 text-white flex flex-col items-center justify-center shadow-inner relative">
+            <div class="flex items-center justify-around w-full gap-4">
+              <!-- 人像燈柱 -->
+              <div class="flex flex-col items-center">
+                <div class="bg-slate-800 border-4 border-slate-600 rounded-3xl p-3 space-y-3 shadow-lg">
+                  <!-- 紅人像 -->
+                  <div id="lamp-red" class="w-20 h-20 rounded-full bg-red-950/60 border-2 border-slate-700 flex items-center justify-center transition-all">
+                    <svg viewBox="0 0 60 60" class="w-14 h-14">
+                      <circle cx="30" cy="14" r="6" fill="#ef4444"/>
+                      <rect x="23" y="22" width="14" height="18" rx="4" fill="#ef4444"/>
+                      <rect x="24" y="40" width="5" height="14" rx="2" fill="#ef4444"/>
+                      <rect x="31" y="40" width="5" height="14" rx="2" fill="#ef4444"/>
+                    </svg>
+                  </div>
+                  <!-- 綠人像 -->
+                  <div id="lamp-green" class="w-20 h-20 rounded-full bg-emerald-950/60 border-2 border-slate-700 flex items-center justify-center transition-all">
+                    <svg viewBox="0 0 60 60" class="w-14 h-14">
+                      <circle cx="30" cy="13" r="6" fill="#22c55e"/>
+                      <path d="M25 21 L35 21 L38 35 L23 35 Z" fill="#22c55e"/>
+                      <path d="M25 35 L18 52 L23 54 L30 39 L37 54 L42 52 L35 35 Z" fill="#22c55e"/>
+                      <path d="M24 23 L15 33 L19 36 L26 27 Z" fill="#22c55e"/>
+                      <path d="M36 23 L45 33 L41 36 L34 27 Z" fill="#22c55e"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="w-4 h-12 bg-slate-500"></div>
+              </div>
+
+              <!-- 黃色行人燈號控制器 + 底部震動組件 -->
+              <div class="flex flex-col items-center">
+                <button onclick="pressPedestrianButton()" id="ped-push-btn" class="touch-btn bg-amber-400 hover:bg-amber-300 text-slate-900 rounded-3xl p-4 border-4 border-amber-600 shadow-lg flex flex-col items-center w-36">
+                  <div id="wait-indicator" class="w-full py-1 px-2 rounded-lg bg-slate-800 text-amber-400 text-xs font-black mb-2">請按掣等候</div>
+                  <div class="w-12 h-12 rounded-full bg-amber-500 border-4 border-amber-700 flex items-center justify-center text-2xl shadow-inner">👆</div>
+                  <span class="text-xs font-black mt-2 text-slate-800">視障人士輔助設施</span>
+                </button>
+                <!-- 底部震動箭咀指示器 -->
+                <div class="mt-3 bg-slate-800 border-2 border-amber-400 rounded-2xl p-2.5 text-center w-40">
+                  <div class="text-[11px] text-amber-300 font-bold">震動組件底部箭咀</div>
+                  <div id="tactile-arrow" class="text-2xl font-black text-amber-400 mt-0.5">⬆️ 過路方向</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 駕駛者交通燈狀態提示 -->
+            <div class="mt-4 w-full bg-slate-800/90 rounded-2xl p-3 flex items-center justify-between text-xs sm:text-sm border border-slate-700">
+              <span class="text-slate-300 font-bold">🚗 給駕駛者的交通燈：</span>
+              <span id="driver-light-status" class="font-black text-emerald-400">🟢 綠燈（車輛行駛中）</span>
+            </div>
+          </div>
+
+          <!-- 右側三種燈號切換按鈕與詳細規則 -->
+          <div class="lg:col-span-7 space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button onclick="setTrafficSignal('red')" id="sig-btn-red" class="touch-btn p-3.5 rounded-2xl font-black text-base border-4 border-red-500 bg-red-500 text-white shadow-md flex flex-col items-center">
+                <span>🔴 紅色人像亮着</span>
+                <span class="text-xs font-bold opacity-90 mt-1">很慢槌擊聲</span>
+              </button>
+              <button onclick="setTrafficSignal('green')" id="sig-btn-green" class="touch-btn p-3.5 rounded-2xl font-black text-base border-4 border-emerald-500 bg-white text-emerald-700 flex flex-col items-center">
+                <span>🟢 綠色人像亮定</span>
+                <span class="text-xs font-bold opacity-90 mt-1">連續「必必」聲響</span>
+              </button>
+              <button onclick="setTrafficSignal('blink')" id="sig-btn-blink" class="touch-btn p-3.5 rounded-2xl font-black text-base border-4 border-amber-500 bg-white text-amber-700 flex flex-col items-center">
+                <span>🟢⚡ 綠色人像閃動</span>
+                <span class="text-xs font-bold opacity-90 mt-1">間斷「必必」聲響</span>
+              </button>
+            </div>
+
+            <!-- 聲響重播按鈕 -->
+            <div class="flex flex-wrap items-center justify-between gap-2 bg-sky-50 border-2 border-sky-200 rounded-2xl p-3.5">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">🔊</span>
+                <div>
+                  <div class="text-xs font-bold text-sky-700">電子行人過路發聲裝置音效</div>
+                  <div id="sound-desc" class="font-black text-slate-800 text-base">很慢槌擊聲（叩... 叩...）</div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="playCurrentSignalSound()" class="touch-btn bg-sky-600 hover:bg-sky-700 text-white font-black px-4 py-2 rounded-xl text-sm shadow">
+                  ▶️ 聽發聲器
+                </button>
+                <button onclick="speakCurrentSignalRule(this)" class="touch-btn bg-amber-400 hover:bg-amber-500 text-slate-900 font-black px-4 py-2 rounded-xl text-sm shadow">
+                  🗣️ 聽廣東話講解
+                </button>
+              </div>
+            </div>
+
+            <!-- 燈號行動守則卡片 -->
+            <div id="signal-rule-box" class="bg-red-50 border-2 border-red-300 rounded-2xl p-4 space-y-2">
+              <!-- JS 動態更新 -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 互動模組 2：過路設施與殘疾人士設施探索 -->
+      <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border-4 border-sky-200">
+        <span class="bg-sky-100 text-sky-800 font-black px-3 py-1 rounded-full text-sm">第二站｜認識過路與無障礙設施</span>
+        <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mt-1 mb-4">2. 點擊探索四大過路設施與視障輔助地磚</h2>
+
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-4">
+          <button onclick="showFacilityDetail('zebra')" class="fac-tab touch-btn p-3 rounded-2xl font-black text-sm bg-sky-600 text-white shadow">🦓 斑馬線</button>
+          <button onclick="showFacilityDetail('bridge')" class="fac-tab touch-btn p-3 rounded-2xl font-black text-sm bg-slate-100 text-slate-700">🌉 行人天橋</button>
+          <button onclick="showFacilityDetail('subway')" class="fac-tab touch-btn p-3 rounded-2xl font-black text-sm bg-slate-100 text-slate-700">🚇 行人隧道</button>
+          <button onclick="showFacilityDetail('island')" class="fac-tab touch-btn p-3 rounded-2xl font-black text-sm bg-slate-100 text-slate-700">🏝️ 安全島</button>
+          <button onclick="showFacilityDetail('tactile')" class="fac-tab touch-btn p-3 rounded-2xl font-black text-sm bg-slate-100 text-slate-700">🟨 凹凸紋地磚</button>
+        </div>
+
+        <div id="facility-detail-box" class="bg-gradient-to-br from-sky-50 to-indigo-50 border-2 border-sky-200 rounded-3xl p-5">
+          <!-- JS 動態渲染細節與 SVG 圖解 -->
+        </div>
+      </div>
+
+      <!-- 互動模組 3：過路六大守則觸控拖拉排序遊戲 -->
+      <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border-4 border-amber-300">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <span class="bg-amber-100 text-amber-900 font-black px-3 py-1 rounded-full text-sm">第二站｜考章必考排序題</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mt-1">3. 「過路六大守則」觸控排序挑戰</h2>
+            <p class="text-slate-600 font-bold text-sm mt-1">沒有過路設施時，行人應遵守六大守則！請<strong>拖拉卡片</strong>（或<strong>先點卡片、再點下方空格</strong>）排成 1 至 6 的正確順序：</p>
+          </div>
+          <button onclick="resetRulesOrder()" class="touch-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-4 py-2 rounded-2xl text-sm">
+            🔄 重新洗牌
+          </button>
+        </div>
+
+        <!-- 6 個放置槽位 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5" id="rules-slots">
+          <!-- JS 生成 1-6 槽位 -->
+        </div>
+
+        <!-- 待選打亂卡片池 -->
+        <div class="bg-slate-100 p-4 rounded-2xl border-2 border-dashed border-slate-300">
+          <div class="text-xs font-black text-slate-500 mb-2">📦 守則卡片區（拖拉或點擊選取）：</div>
+          <div id="rules-pool" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            <!-- JS 生成打亂卡片 -->
+          </div>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <button onclick="checkRulesOrder()" class="touch-btn bg-emerald-600 hover:bg-emerald-700 text-white font-black px-6 py-3 rounded-2xl text-base shadow-lg">
+            ✅ 檢查我的排序
+          </button>
+          <div id="rules-feedback" class="font-black text-base"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 第三站：交通標誌配對館                                    -->
+    <!-- ========================================================= -->
+    <section id="station-3" class="station-panel hidden space-y-6">
+      <!-- 標誌百科點擊圖鑑 -->
+      <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border-4 border-rose-200">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <span class="bg-rose-100 text-rose-800 font-black px-3 py-1 rounded-full text-sm">第三站｜香港交通標誌圖鑑</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mt-1">1. 點擊交通標誌查看考章重點</h2>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="filterSigns('all')" class="sign-filter touch-btn px-3.5 py-2 rounded-xl font-black text-sm bg-rose-600 text-white">全部標誌</button>
+            <button onclick="filterSigns('ped')" class="sign-filter touch-btn px-3.5 py-2 rounded-xl font-black text-sm bg-slate-100 text-slate-700">行人與學校</button>
+            <button onclick="filterSigns('road')" class="sign-filter touch-btn px-3.5 py-2 rounded-xl font-black text-sm bg-slate-100 text-slate-700">道路與公共交通</button>
+          </div>
+        </div>
+
+        <!-- 選中標誌詳細說明橫幅 -->
+        <div id="sign-inspector" class="mb-5 p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 flex flex-col sm:flex-row items-center gap-4">
+          <div id="inspector-svg" class="w-20 h-20 shrink-0 flex items-center justify-center"></div>
+          <div>
+            <div class="text-xs font-black text-amber-700">📌 標誌名稱與意義</div>
+            <h3 id="inspector-title" class="text-xl font-black text-slate-900">請點擊下方任何一個交通標誌！</h3>
+            <p id="inspector-desc" class="text-slate-700 font-bold text-sm mt-1">點擊標誌圖案即可聆聽提示並查看詳細解釋。</p>
+          </div>
+        </div>
+
+        <!-- 標誌網格 -->
+        <div id="signs-gallery" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+          <!-- JS 生成所有標誌 -->
+        </div>
+      </div>
+
+      <!-- 觸控拖拉/點擊配對小遊戲 -->
+      <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border-4 border-purple-200">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <span class="bg-purple-100 text-purple-800 font-black px-3 py-1 rounded-full text-sm">第三站｜手感訓練</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mt-1">2. 交通標誌觸控配對挑戰</h2>
+            <p class="text-slate-600 font-bold text-sm">請把左邊的標誌<strong>拖拉到右邊對應的解釋框</strong>，或<strong>先點左邊標誌、再點右邊解釋</strong>！</p>
+          </div>
+          <button onclick="initSignMatchGame()" class="touch-btn bg-purple-600 text-white font-black px-4 py-2 rounded-2xl text-sm shadow">
+            🎲 換一組新題目
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <div id="match-signs-col" class="grid grid-cols-2 gap-3"></div>
+          <div id="match-labels-col" class="space-y-3"></div>
+        </div>
+        <div id="match-game-status" class="mt-4 text-center font-black text-lg text-emerald-700"></div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 第四站：乘客安全守護者                                    -->
+    <!-- ========================================================= -->
+    <section id="station-4" class="station-panel hidden space-y-6">
+      <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border-4 border-teal-200">
+        <span class="bg-teal-100 text-teal-800 font-black px-3 py-1 rounded-full text-sm">第四站｜五大交通工具安全守則</span>
+        <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mt-1 mb-4">選擇交通工具，檢查安全行為！</h2>
+
+        <!-- 五大交通工具分頁按鈕 -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-6">
+          <button onclick="selectVehicle('bus')" id="veh-btn-bus" class="veh-tab touch-btn p-3 rounded-2xl font-black text-sm sm:text-base bg-teal-600 text-white shadow-md">🚌 巴士</button>
+          <button onclick="selectVehicle('minibus')" id="veh-btn-minibus" class="veh-tab touch-btn p-3 rounded-2xl font-black text-sm sm:text-base bg-slate-100 text-slate-700">🚐 小巴及的士</button>
+          <button onclick="selectVehicle('tram')" id="veh-btn-tram" class="veh-tab touch-btn p-3 rounded-2xl font-black text-sm sm:text-base bg-slate-100 text-slate-700">🚋 電車及輕鐵</button>
+          <button onclick="selectVehicle('car')" id="veh-btn-car" class="veh-tab touch-btn p-3 rounded-2xl font-black text-sm sm:text-base bg-slate-100 text-slate-700">🚗 私家車</button>
+          <button onclick="selectVehicle('schoolbus')" id="veh-btn-schoolbus" class="veh-tab touch-btn p-3 rounded-2xl font-black text-sm sm:text-base bg-slate-100 text-slate-700"> Yellow 校巴保姆車</button>
+        </div>
+
+        <!-- 交通工具互動內容容器 -->
+        <div id="vehicle-content-area">
+          <!-- JS 動態渲染 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 第五站：道路安全專章模擬大考場（完整覆蓋考卷四大題型）      -->
+    <!-- ========================================================= -->
+    <section id="station-5" class="station-panel hidden space-y-6">
+      <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border-4 border-rose-300">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b-2 border-slate-100 pb-4 mb-6">
+          <div>
+            <span class="bg-rose-600 text-white font-black px-3 py-1 rounded-full text-sm">香港交通安全隊｜道路安全專章模擬考場</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mt-1">全真專章工作紙模擬測試（共 30 題）</h2>
+            <p class="text-slate-600 font-bold text-sm mt-1">點擊每題的「🗣️ 讀題目」可聽廣東話朗讀！完成四個部分奪取電子專章證書！</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="auto-read-btn" onclick="toggleAutoRead()" class="touch-btn bg-amber-100 border-2 border-amber-400 text-amber-900 font-black px-4 py-2.5 rounded-2xl text-sm flex items-center gap-1.5">
+              <span id="auto-read-icon">🔁</span>
+              <span id="auto-read-text">自動連讀下一題：關</span>
+            </button>
+            <button onclick="resetFullExam()" class="touch-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-4 py-2.5 rounded-2xl text-sm">
+              🔄 清空重考
+            </button>
+          </div>
+        </div>
+
+        <!-- 考試成績總結橫幅（交卷後顯示） -->
+        <div id="exam-result-banner" class="hidden mb-8 p-6 rounded-3xl bg-gradient-to-r from-amber-100 via-yellow-100 to-emerald-100 border-4 border-amber-400 text-center space-y-3 shadow-lg">
+          <div id="exam-badge-emoji" class="text-6xl">🏆</div>
+          <h3 id="exam-score-title" class="text-2xl sm:text-3xl font-black text-slate-900">你的成績：0 / 30 分</h3>
+          <p id="exam-score-msg" class="text-base sm:text-lg font-bold text-slate-700"></p>
+          <div class="pt-1">
+            <button onclick="speakExamSummary(this)" class="touch-btn bg-amber-400 hover:bg-amber-500 text-slate-900 font-black px-6 py-2.5 rounded-2xl text-base shadow">
+              🗣️ 廣東話讀出成績
+            </button>
+          </div>
+        </div>
+
+        <!-- 第一部分：填充（過路設施辨識 A, B, C, D） -->
+        <div class="mb-8 bg-sky-50/70 p-5 rounded-3xl border-2 border-sky-200">
+          <h3 class="text-xl font-black text-sky-900 mb-3">（一）辨識過路設施（4分）：請選出街道圖中 A、B、C、D 紅圈的過路設施名稱</h3>
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+            <!-- SVG 街道全景圖標示 A, B, C, D -->
+            <div class="lg:col-span-6 bg-white p-2 rounded-2xl border-2 border-sky-300 shadow">
+              <svg viewBox="0 0 460 320" class="w-full h-auto rounded-xl">
+                <!-- 草地與街道底色 -->
+                <rect x="0" y="0" width="460" height="320" fill="#bbf7d0"/>
+                <!-- 橫向馬路 -->
+                <rect x="0" y="65" width="460" height="55" fill="#334155"/>
+                <!-- 縱向馬路 -->
+                <rect x="130" y="65" width="75" height="255" fill="#334155"/>
+                <line x1="167" y1="120" x2="167" y2="320" stroke="#fff" stroke-width="3" stroke-dasharray="12 10"/>
+                <!-- A: 斑馬線 -->
+                <g fill="#ffffff">
+                  <rect x="35" y="72" width="40" height="6"/><rect x="35" y="83" width="40" height="6"/>
+                  <rect x="35" y="94" width="40" height="6"/><rect x="35" y="105" width="40" height="6"/>
+                </g>
+                <circle cx="55" cy="92" r="30" fill="none" stroke="#ef4444" stroke-width="5"/>
+                <rect x="10" y="72" width="26" height="28" rx="4" fill="#22c55e"/>
+                <text x="23" y="92" text-anchor="middle" fill="#000" font-weight="900" font-size="20">A</text>
+
+                <!-- B: 行人隧道入口 -->
+                <rect x="235" y="25" width="54" height="34" rx="4" fill="#1d4ed8"/>
+                <text x="262" y="46" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">行人隧道</text>
+                <rect x="242" y="59" width="40" height="10" fill="#64748b"/>
+                <circle cx="262" cy="45" r="32" fill="none" stroke="#ef4444" stroke-width="5"/>
+                <rect x="296" y="28" width="26" height="28" rx="4" fill="#22c55e"/>
+                <text x="309" y="48" text-anchor="middle" fill="#000" font-weight="900" font-size="20">B</text>
+
+                <!-- C: 行人天橋 -->
+                <rect x="95" y="150" width="145" height="22" fill="#3b82f6" stroke="#1e3a8a" stroke-width="2"/>
+                <rect x="75" y="150" width="22" height="50" fill="#93c5fd" stroke="#1e3a8a" stroke-width="2"/>
+                <circle cx="88" cy="175" r="30" fill="none" stroke="#ef4444" stroke-width="5"/>
+                <rect x="52" y="195" width="26" height="28" rx="4" fill="#22c55e"/>
+                <text x="65" y="215" text-anchor="middle" fill="#000" font-weight="900" font-size="20">C</text>
+
+                <!-- D: 人像燈過路處 -->
+                <rect x="130" y="255" width="75" height="26" fill="#facc15" opacity="0.8"/>
+                <rect x="215" y="242" width="14" height="32" rx="3" fill="#0f172a"/>
+                <circle cx="222" cy="251" r="4" fill="#ef4444"/>
+                <circle cx="222" cy="265" r="4" fill="#22c55e"/>
+                <circle cx="222" cy="262" r="28" fill="none" stroke="#ef4444" stroke-width="5"/>
+                <rect x="252" y="248" width="26" height="28" rx="4" fill="#22c55e"/>
+                <text x="265" y="268" text-anchor="middle" fill="#000" font-weight="900" font-size="20">D</text>
+              </svg>
+            </div>
+
+            <!-- A, B, C, D 下拉/點擊選擇框 -->
+            <div class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-3" id="exam-part1-container">
+              <!-- JS 生成 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 第二部分：連線配對（標誌與相配字詞 A 組及 B 組，共 8 題） -->
+        <div class="mb-8 bg-amber-50/70 p-5 rounded-3xl border-2 border-amber-200">
+          <h3 class="text-xl font-black text-amber-900 mb-1">（二）交通標誌配對（8分）：請為每個標誌選擇正確字詞</h3>
+          <p class="text-sm font-bold text-slate-600 mb-4">點擊標誌下方的選項按鈕，完成 A 組及 B 組配對：</p>
+          <div id="exam-part2-container" class="space-y-6">
+            <!-- JS 生成 A 組與 B 組 -->
+          </div>
+        </div>
+
+        <!-- 第三部分：選擇題（完整 10 題） -->
+        <div class="mb-8 bg-emerald-50/70 p-5 rounded-3xl border-2 border-emerald-200">
+          <h3 class="text-xl font-black text-emerald-900 mb-4">（三）選擇題（10分）：請點擊最適當的答案</h3>
+          <div id="exam-part3-container" class="space-y-4">
+            <!-- JS 生成 10 題選擇題 -->
+          </div>
+        </div>
+
+        <!-- 第四部分：判斷題（完整 8 題，✓ 或 ✗） -->
+        <div class="mb-8 bg-purple-50/70 p-5 rounded-3xl border-2 border-purple-200">
+          <h3 class="text-xl font-black text-purple-900 mb-4">（四）乘客安全判斷題（8分）：正確請按「✓」，不正確請按「✗」</h3>
+          <div id="exam-part4-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- JS 生成 8 題判斷題 -->
+          </div>
+        </div>
+
+        <!-- 交卷按鈕 -->
+        <div class="text-center pt-2">
+          <button onclick="submitFullExam()" class="touch-btn bg-gradient-to-r from-rose-600 to-amber-500 hover:from-rose-700 hover:to-amber-600 text-white font-black text-xl px-10 py-4 rounded-3xl shadow-2xl">
+            📝 遞交模擬考卷並查看成績！
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // =========================================================
+    // 0. 廣東話語音朗讀引擎 (Web Speech API - zh-HK 優先)
+    // =========================================================
+    let ttsEnabled = true;
+    let autoReadNext = false;
+    let cantoneseVoice = null;
+    let currentSpeakBtn = null;
+
+    function loadCantoneseVoice() {
+      if (!('speechSynthesis' in window)) return;
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices || voices.length === 0) return;
+
+      // 優先尋找香港廣東話 (zh-HK / yue-HK / Cantonese)
+      cantoneseVoice =
+        voices.find(v => v.lang.toLowerCase() === 'zh-hk' || v.lang.toLowerCase() === 'yue-hk') ||
+        voices.find(v => v.lang.toLowerCase().includes('hk') || v.lang.toLowerCase().includes('yue')) ||
+        voices.find(v => /cantonese|粵語|廣東|香港|sin-ji|sinji/i.test(v.name)) ||
+        voices.find(v => v.lang.toLowerCase().startsWith('zh'));
+    }
+
+    if ('speechSynthesis' in window) {
+      loadCantoneseVoice();
+      window.speechSynthesis.onvoiceschanged = loadCantoneseVoice;
+    }
+
+    function stopCantonese() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      if (currentSpeakBtn) {
+        currentSpeakBtn.classList.remove('speaking-active');
+        currentSpeakBtn = null;
+      }
+      const stopBtn = document.getElementById('tts-stop-btn');
+      if (stopBtn) stopBtn.classList.add('hidden');
+    }
+
+    // 專為廣東話朗讀優化文字發音（將英文字母/符號轉為自然粵語讀法）
+    function formatForCantonese(rawText) {
+      return String(rawText)
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\(\s*1\s*\)/g, '第一點，')
+        .replace(/\(\s*2\s*\)/g, '第二點，')
+        .replace(/\(\s*3\s*\)/g, '第三點，')
+        .replace(/\(\s*4\s*\)/g, '第四點，')
+        .replace(/\(\s*5\s*\)/g, '第五點，')
+        .replace(/\(\s*6\s*\)/g, '第六點，')
+        .replace(/^A\./gm, '選項 A，')
+        .replace(/^B\./gm, '選項 B，')
+        .replace(/^C\./gm, '選項 C，')
+        .replace(/✓/g, '正確')
+        .replace(/✗/g, '不正確')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function speakCantonese(text, btnEl = null) {
+      if (!ttsEnabled || !('speechSynthesis' in window)) return;
+      stopCantonese();
+      loadCantoneseVoice();
+
+      const cleanText = formatForCantonese(text);
+      if (!cleanText) return;
+
+      const utter = new SpeechSynthesisUtterance(cleanText);
+      if (cantoneseVoice) {
+        utter.voice = cantoneseVoice;
+        utter.lang = cantoneseVoice.lang;
+      } else {
+        utter.lang = 'zh-HK';
+      }
+      // 略慢清晰語速，適合小學組隊員聆聽
+      utter.rate = 0.9;
+      utter.pitch = 1.05;
+
+      if (btnEl) {
+        currentSpeakBtn = btnEl;
+        btnEl.classList.add('speaking-active');
+      }
+      const stopBtn = document.getElementById('tts-stop-btn');
+      if (stopBtn) stopBtn.classList.remove('hidden');
+
+      utter.onend = () => {
+        if (currentSpeakBtn) {
+          currentSpeakBtn.classList.remove('speaking-active');
+          currentSpeakBtn = null;
+        }
+        if (stopBtn) stopBtn.classList.add('hidden');
+      };
+      utter.onerror = () => {
+        if (currentSpeakBtn) {
+          currentSpeakBtn.classList.remove('speaking-active');
+          currentSpeakBtn = null;
+        }
+        if (stopBtn) stopBtn.classList.add('hidden');
+      };
+
+      window.speechSynthesis.speak(utter);
+    }
+
+    function toggleTTS() {
+      ttsEnabled = !ttsEnabled;
+      const btn = document.getElementById('tts-toggle-btn');
+      const textEl = document.getElementById('tts-text');
+      if (ttsEnabled) {
+        btn.className = 'touch-btn bg-amber-400 hover:bg-amber-300 text-slate-900 px-3.5 py-2 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1.5 shadow';
+        textEl.textContent = '廣東話讀題：開';
+        speakCantonese('廣東話讀題功能已經開啟，點擊任何題目的喇叭按鈕就可以聽我讀題目啦！');
+      } else {
+        stopCantonese();
+        btn.className = 'touch-btn bg-white/20 text-white px-3.5 py-2 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1.5 border border-white/30';
+        textEl.textContent = '廣東話讀題：關';
+      }
+    }
+
+    function toggleAutoRead() {
+      playClickSound();
+      autoReadNext = !autoReadNext;
+      const btn = document.getElementById('auto-read-btn');
+      const txt = document.getElementById('auto-read-text');
+      if (autoReadNext) {
+        btn.className = 'touch-btn bg-amber-400 border-2 border-amber-600 text-slate-900 font-black px-4 py-2.5 rounded-2xl text-sm flex items-center gap-1.5 shadow';
+        txt.textContent = '自動連讀下一題：開';
+        speakCantonese('已開啟自動連讀下一題');
+      } else {
+        btn.className = 'touch-btn bg-amber-100 border-2 border-amber-400 text-amber-900 font-black px-4 py-2.5 rounded-2xl text-sm flex items-center gap-1.5';
+        txt.textContent = '自動連讀下一題：關';
+      }
+    }
+
+    // =========================================================
+    // 1. Web Audio API 擬真交通音效引擎（無外部音檔依賴）
+    // =========================================================
+    let audioCtx = null;
+    let isMuted = false;
+    let signalSoundTimer = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function toggleAudio() {
+      isMuted = !isMuted;
+      document.getElementById('mute-icon').textContent = isMuted ? '🔇' : '🔊';
+      document.getElementById('mute-text').textContent = isMuted ? '音效靜音' : '音效開啟';
+      if (isMuted && signalSoundTimer) {
+        clearInterval(signalSoundTimer);
+        signalSoundTimer = null;
+      }
+    }
+
+    function playTone(freq, type = 'sine', duration = 0.12, gainVal = 0.25) {
+      if (isMuted) return;
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playClickSound() { playTone(520, 'sine', 0.08, 0.18); }
+    function playSuccessSound() {
+      playTone(523.25, 'triangle', 0.12, 0.25);
+      setTimeout(() => playTone(659.25, 'triangle', 0.12, 0.25), 90);
+      setTimeout(() => playTone(783.99, 'triangle', 0.22, 0.3), 180);
+    }
+    function playErrorSound() {
+      playTone(220, 'sawtooth', 0.18, 0.2);
+      setTimeout(() => playTone(185, 'sawtooth', 0.24, 0.2), 140);
+    }
+
+    // 香港電子行人過路發聲裝置音效模擬
+    function playPedestrianSignalBeep(mode) {
+      if (signalSoundTimer) {
+        clearInterval(signalSoundTimer);
+        signalSoundTimer = null;
+      }
+      if (isMuted) return;
+
+      if (mode === 'red') {
+        // 很慢槌擊聲 (約每 1.3 秒低頻敲擊)
+        const knock = () => playTone(190, 'triangle', 0.07, 0.35);
+        knock();
+        signalSoundTimer = setInterval(knock, 1300);
+      } else if (mode === 'green') {
+        // 連續快速「必必」聲響 (高頻短促連響)
+        const beep = () => playTone(2400, 'sine', 0.06, 0.22);
+        beep();
+        signalSoundTimer = setInterval(beep, 140);
+      } else if (mode === 'blink') {
+        // 間斷的「必必」聲響 (雙響後停頓)
+        const doubleBeep = () => {
+          playTone(2400, 'sine', 0.06, 0.22);
+          setTimeout(() => playTone(2400, 'sine', 0.06, 0.22), 130);
+        };
+        doubleBeep();
+        signalSoundTimer = setInterval(doubleBeep, 650);
+      }
+    }
+
+    // 積分系統
+    let totalStars = 0;
+    const rewardedIds = new Set();
+    function addStar(id, count = 1) {
+      if (!rewardedIds.has(id)) {
+        rewardedIds.add(id);
+        totalStars += count;
+        document.getElementById('global-stars').textContent = totalStars;
+      }
+    }
+
+    // =========================================================
+    // 2. 分頁導覽切換
+    // =========================================================
+    function switchStation(num) {
+      playClickSound();
+      stopCantonese();
+      if (num !== 2 && signalSoundTimer) {
+        clearInterval(signalSoundTimer);
+        signalSoundTimer = null;
+      }
+      document.querySelectorAll('.station-panel').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`station-${num}`).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-tab').forEach((btn, idx) => {
+        const sNum = idx + 1;
+        if (sNum === num) {
+          btn.className = 'nav-tab touch-btn px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base flex items-center gap-2 bg-amber-400 text-slate-900 shadow-md';
+        } else if (sNum === 5) {
+          btn.className = 'nav-tab touch-btn px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base flex items-center gap-2 bg-rose-500 text-white hover:bg-rose-600 shadow-md';
+        } else {
+          btn.className = 'nav-tab touch-btn px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base flex items-center gap-2 bg-white/10 text-white hover:bg-white/20';
+        }
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // =========================================================
+    // 3. 第一站：行人安全大挑戰
+    // =========================================================
+    const pedestrianScenarios = [
+      {
+        id: 'p1',
+        title: '留意交通情況，沒有車輛才橫過馬路',
+        safe: true,
+        reason: '正確！過馬路前必須先站定，左右看清楚並細心聆聽，確定沒有車輛駛近才直線橫過馬路。',
+        svg: `<svg viewBox="0 0 240 130" class="w-full h-32 rounded-2xl bg-sky-100">
+          <rect x="0" y="75" width="240" height="55" fill="#475569"/>
+          <g fill="#fff"><rect x="90" y="80" width="60" height="7"/><rect x="90" y="93" width="60" height="7"/><rect x="90" y="106" width="60" height="7"/><rect x="90" y="119" width="60" height="7"/></g>
+          <circle cx="120" cy="45" r="12" fill="#fed7aa"/><rect x="109" y="58" width="22" height="26" rx="6" fill="#0284c7"/>
+          <path d="M85 45 L102 45 M138 45 L155 45" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
+          <text x="120" y="22" text-anchor="middle" font-size="13" font-weight="900" fill="#0369a1">👀 左看右看 無車才過</text>
+        </svg>`
+      },
+      {
+        id: 'p2',
+        title: '在馬路上奔跑、嬉戲或衝出馬路拾回物件',
+        safe: false,
+        reason: '危險！在馬路上奔跑追逐、嬉戲或突然衝出拾回皮球/物件，司機根本來不及煞車，極易發生嚴重意外！',
+        svg: `<svg viewBox="0 0 240 130" class="w-full h-32 rounded-2xl bg-rose-100">
+          <rect x="0" y="75" width="240" height="55" fill="#475569"/>
+          <circle cx="155" cy="105" r="11" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+          <circle cx="105" cy="68" r="11" fill="#fed7aa"/><path d="M100 80 L118 96" stroke="#ef4444" stroke-width="10" stroke-linecap="round"/>
+          <rect x="15" y="82" width="55" height="24" rx="6" fill="#dc2626"/>
+          <text x="120" y="24" text-anchor="middle" font-size="13" font-weight="900" fill="#be123c">⚽ 切勿衝出馬路追球！</text>
+        </svg>`
+      },
+      {
+        id: 'p3',
+        title: '從兩輛停泊在路邊的車輛之間衝出馬路',
+        safe: false,
+        reason: '危險！即使車輛停放在路邊，車身會完全遮擋你和行駛中車輛司機的視線，切勿從兩車之間穿出馬路！',
+        svg: `<svg viewBox="0 0 240 130" class="w-full h-32 rounded-2xl bg-amber-100">
+          <rect x="0" y="75" width="240" height="55" fill="#475569"/>
+          <rect x="15" y="65" width="75" height="36" rx="8" fill="#eab308"/>
+          <rect x="145" y="65" width="75" height="36" rx="8" fill="#3b82f6"/>
+          <circle cx="118" cy="72" r="10" fill="#fed7aa"/><rect x="110" y="83" width="16" height="24" rx="4" fill="#ef4444"/>
+          <text x="120" y="24" text-anchor="middle" font-size="13" font-weight="900" fill="#b45309">🚗⚠️🚗 兩車之間有盲點！</text>
+        </svg>`
+      },
+      {
+        id: 'p4',
+        title: '為了貪方便攀越路邊行人欄杆橫過馬路',
+        safe: false,
+        reason: '危險！欄杆是用來保護行人及引導大家使用安全過路設施的，攀越欄杆既危險又違法！',
+        svg: `<svg viewBox="0 0 240 130" class="w-full h-32 rounded-2xl bg-red-100">
+          <rect x="0" y="85" width="240" height="45" fill="#475569"/>
+          <g stroke="#94a3b8" stroke-width="5"><line x1="20" y1="68" x2="220" y2="68"/><line x1="40" y1="68" x2="40" y2="95"/><line x1="120" y1="68" x2="120" y2="95"/><line x1="200" y1="68" x2="200" y2="95"/></g>
+          <circle cx="120" cy="36" r="11" fill="#fed7aa"/><rect x="110" y="48" width="20" height="22" rx="5" fill="#f97316"/>
+          <text x="120" y="20" text-anchor="middle" font-size="13" font-weight="900" fill="#b91c1c">🚧 嚴禁攀越行人欄杆！</text>
+        </svg>`
+      },
+      {
+        id: 'p5',
+        title: '在路口及轉角位盲點處直接橫過馬路',
+        safe: false,
+        reason: '危險！轉角處有建築物遮擋視線，轉彎車輛隨時駛出，應走遠離轉角位並使用過路設施！',
+        svg: `<svg viewBox="0 0 240 130" class="w-full h-32 rounded-2xl bg-orange-100">
+          <rect x="0" y="75" width="240" height="55" fill="#475569"/>
+          <rect x="0" y="15" width="95" height="65" fill="#d97706"/>
+          <rect x="25" y="55" width="48" height="22" rx="6" fill="#0ea5e9"/>
+          <circle cx="112" cy="65" r="10" fill="#fed7aa"/><rect x="104" y="76" width="16" height="24" rx="4" fill="#ef4444"/>
+          <text x="155" y="32" text-anchor="middle" font-size="12" font-weight="900" fill="#9a3412">🏢 轉角位視線受阻！</text>
+        </svg>`
+      },
+      {
+        id: 'p6',
+        title: '過馬路時主動牽手照顧同行小童及長者',
+        safe: true,
+        reason: '正確！小童容易衝動奔跑，長者步履較慢，過馬路時應緊握他們的手，一同使用安全過路設施。',
+        svg: `<svg viewBox="0 0 240 130" class="w-full h-32 rounded-2xl bg-emerald-100">
+          <rect x="0" y="85" width="240" height="45" fill="#475569"/>
+          <circle cx="95" cy="40" r="12" fill="#fed7aa"/><rect x="83" y="53" width="24" height="32" rx="6" fill="#3b82f6"/>
+          <circle cx="135" cy="46" r="11" fill="#e2e8f0"/><rect x="124" y="58" width="22" height="27" rx="6" fill="#84cc16"/>
+          <line x1="107" y1="68" x2="124" y2="68" stroke="#fed7aa" stroke-width="5" stroke-linecap="round"/>
+          <text x="120" y="20" text-anchor="middle" font-size="13" font-weight="900" fill="#15803d">🤝 照顧同行小童及長者</text>
+        </svg>`
+      }
+    ];
+
+    function renderPedestrianCards() {
+      const grid = document.getElementById('pedestrian-cards-grid');
+      grid.innerHTML = pedestrianScenarios.map((item, idx) => `
+        <div id="card-${item.id}" class="bg-slate-50 rounded-3xl p-4 border-2 border-slate-200 flex flex-col justify-between shadow-sm">
+          <div>
+            ${item.svg}
+            <div class="flex items-start justify-between gap-2 mt-3">
+              <h3 class="text-lg font-black text-slate-800 leading-snug">${item.title}</h3>
+              <button onclick="speakPedestrianScenario('${item.id}', this)" aria-label="廣東話讀出題目" class="touch-btn shrink-0 bg-amber-300 hover:bg-amber-400 text-slate-900 font-black px-3 py-1.5 rounded-xl text-xs shadow flex items-center gap-1">
+                <span>🗣️</span><span>讀題</span>
+              </button>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="grid grid-cols-2 gap-2.5">
+              <button onclick="answerPedestrian('${item.id}', true)" class="touch-btn py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-base shadow">✓ 安全</button>
+              <button onclick="answerPedestrian('${item.id}', false)" class="touch-btn py-2.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-base shadow">✗ 危險</button>
+            </div>
+            <div id="fb-${item.id}" class="hidden mt-3 p-3 rounded-2xl text-sm font-bold leading-relaxed"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function speakPedestrianScenario(id, btn) {
+      const item = pedestrianScenarios.find(s => s.id === id);
+      if (item) {
+        speakCantonese(`情境判斷：${item.title}。請問這是安全定危險呢？`, btn);
+      }
+    }
+
+    function answerPedestrian(id, choice) {
+      const item = pedestrianScenarios.find(s => s.id === id);
+      const fb = document.getElementById(`fb-${id}`);
+      const card = document.getElementById(`card-${id}`);
+      fb.classList.remove('hidden');
+
+      if (choice === item.safe) {
+        playSuccessSound();
+        addStar(`ped-${id}`, 1);
+        card.className = 'bg-emerald-50 rounded-3xl p-4 border-4 border-emerald-400 flex flex-col justify-between shadow-md';
+        fb.className = 'mt-3 p-3 rounded-2xl text-sm font-bold leading-relaxed bg-emerald-200/80 text-emerald-950';
+        fb.innerHTML = `<div class="flex items-center justify-between mb-1"><span>🎉 答對了！(+1⭐)</span><button onclick="speakCantonese('${item.reason.replace(/'/g, "\\'")}', this)" class="bg-white/80 px-2.5 py-1 rounded-lg text-xs font-black text-emerald-900">🗣️ 讀解析</button></div>${item.reason}`;
+      } else {
+        playErrorSound();
+        card.className = 'bg-rose-50 rounded-3xl p-4 border-4 border-rose-400 flex flex-col justify-between shadow-md';
+        fb.className = 'mt-3 p-3 rounded-2xl text-sm font-bold leading-relaxed bg-rose-200/80 text-rose-950';
+        fb.innerHTML = `<div class="flex items-center justify-between mb-1"><span>💡 再想一想！</span><button onclick="speakCantonese('${item.reason.replace(/'/g, "\\'")}', this)" class="bg-white/80 px-2.5 py-1 rounded-lg text-xs font-black text-rose-900">🗣️ 讀解析</button></div>${item.reason}`;
+      }
+    }
+
+    // 夜間與雨天變裝實驗室邏輯
+    let simState = { weather: 'day', clothes: 'dark', umbrella: 'dark' };
+
+    function setWeather(w) {
+      playClickSound();
+      simState.weather = w;
+      ['day', 'night', 'rain'].forEach(k => {
+        const btn = document.getElementById(`w-${k}`);
+        btn.className = k === w
+          ? 'touch-btn py-2.5 px-2 rounded-2xl font-black text-sm bg-amber-400 text-slate-900 shadow'
+          : 'touch-btn py-2.5 px-2 rounded-2xl font-black text-sm bg-white border-2 border-slate-300 text-slate-700';
+      });
+      document.getElementById('umbrella-control').classList.toggle('hidden', w !== 'rain');
+      updateVisibilitySim();
+    }
+
+    function setClothes(c) {
+      playClickSound();
+      simState.clothes = c;
+      document.getElementById('c-dark').className = c === 'dark'
+        ? 'touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-slate-800 text-white shadow'
+        : 'touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-white border-2 border-slate-300 text-slate-700';
+      document.getElementById('c-bright').className = c === 'bright'
+        ? 'touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-amber-400 text-slate-900 shadow'
+        : 'touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-white border-2 border-slate-300 text-slate-700';
+      updateVisibilitySim();
+    }
+
+    function setUmbrella(u) {
+      playClickSound();
+      simState.umbrella = u;
+      document.getElementById('u-dark').className = u === 'dark'
+        ? 'touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-slate-700 text-white shadow'
+        : 'touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-white border-2 border-slate-300 text-slate-700';
+      document.getElementById('u-clear').className = u === 'clear'
+        ? 'touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-sky-400 text-slate-900 shadow'
+        : 'touch-btn py-2.5 px-3 rounded-2xl font-black text-sm bg-white border-2 border-slate-300 text-slate-700';
+      updateVisibilitySim();
+    }
+
+    function updateVisibilitySim() {
+      const sky = document.getElementById('sim-sky');
+      const celestial = document.getElementById('sim-celestial');
+      const beam = document.getElementById('sim-headlight');
+      const rain = document.getElementById('sim-rain-drops');
+      const shirt = document.getElementById('sim-shirt');
+      const reflector = document.getElementById('sim-reflector');
+      const umbrella = document.getElementById('sim-umbrella');
+      const canopy = document.getElementById('sim-umbrella-canopy');
+      const fb = document.getElementById('visibility-feedback');
+
+      // 天氣視覺
+      if (simState.weather === 'day') {
+        sky.setAttribute('fill', '#7dd3fc');
+        celestial.setAttribute('fill', '#facc15');
+        celestial.setAttribute('opacity', '1');
+        beam.setAttribute('opacity', '0');
+        rain.setAttribute('opacity', '0');
+        umbrella.setAttribute('opacity', '0');
+      } else if (simState.weather === 'night') {
+        sky.setAttribute('fill', '#0f172a');
+        celestial.setAttribute('fill', '#fef08a');
+        celestial.setAttribute('opacity', '0.9');
+        beam.setAttribute('opacity', '1');
+        rain.setAttribute('opacity', '0');
+        umbrella.setAttribute('opacity', '0');
+      } else {
+        sky.setAttribute('fill', '#334155');
+        celestial.setAttribute('opacity', '0');
+        beam.setAttribute('opacity', '0.85');
+        rain.setAttribute('opacity', '1');
+        umbrella.setAttribute('opacity', '1');
+      }
+
+      // 衣服視覺
+      if (simState.clothes === 'dark') {
+        shirt.setAttribute('fill', '#1e293b');
+        reflector.setAttribute('opacity', '0');
+      } else {
+        shirt.setAttribute('fill', '#ffffff');
+        reflector.setAttribute('opacity', '1');
+      }
+
+      // 雨傘位置與顏色
+      if (simState.weather === 'rain') {
+        if (simState.umbrella === 'dark') {
+          canopy.setAttribute('fill', '#1e3a8a');
+          canopy.setAttribute('fill-opacity', '1');
+          umbrella.setAttribute('transform', 'translate(0, 14)'); // 壓低遮擋視線
+        } else {
+          canopy.setAttribute('fill', '#bae6fd');
+          canopy.setAttribute('fill-opacity', '0.65');
+          umbrella.setAttribute('transform', 'translate(0, -4)'); // 舉高不擋視線
+        }
+      }
+
+      // 評估文字
+      if (simState.weather === 'day') {
+        fb.className = 'p-4 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 font-bold text-sm sm:text-base';
+        fb.innerHTML = '☀️ 白天光線充足！但仍要時刻留意路面交通，切勿低頭玩手機！';
+      } else if (simState.weather === 'night') {
+        if (simState.clothes === 'bright') {
+          addStar('sim-night-safe', 1);
+          fb.className = 'p-4 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 font-bold text-sm sm:text-base';
+          fb.innerHTML = '✅ 太棒了！在天黑或光線不足時，穿著<strong>白色、淺色、熒光或反光衣物</strong>，車燈一照司機就能遠遠看見你！(+1⭐)';
+        } else {
+          fb.className = 'p-4 rounded-2xl bg-rose-100 border-2 border-rose-400 text-rose-950 font-bold text-sm sm:text-base';
+          fb.innerHTML = '⚠️ 危險！夜間穿著全黑深色衣服會融入黑夜背景，司機很難發現你！快換上淺色/反光衣物試試看！';
+        }
+      } else {
+        if (simState.clothes === 'bright' && simState.umbrella === 'clear') {
+          addStar('sim-rain-safe', 1);
+          fb.className = 'p-4 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 font-bold text-sm sm:text-base';
+          fb.innerHTML = '✅ 滿分示範！雨天使用<strong>淺色雨具且不阻擋視線</strong>，加上淺色衣服，既看清來車也讓司機看見你！(+1⭐)';
+        } else {
+          fb.className = 'p-4 rounded-2xl bg-rose-100 border-2 border-rose-400 text-rose-950 font-bold text-sm sm:text-base';
+          fb.innerHTML = '⚠️ 小心！雨天能見度低，深色雨傘壓得太低會遮擋自己看車的視線，深色衣服亦令司機難以察覺！';
+        }
+      }
+    }
+
+    // =========================================================
+    // 4. 第二站：過路設施與守則
+    // =========================================================
+    let currentSignal = 'red';
+
+    function setTrafficSignal(mode) {
+      currentSignal = mode;
+      const lampRed = document.getElementById('lamp-red');
+      const lampGreen = document.getElementById('lamp-green');
+      const driverStatus = document.getElementById('driver-light-status');
+      const soundDesc = document.getElementById('sound-desc');
+      const ruleBox = document.getElementById('signal-rule-box');
+
+      // 重設按鈕樣式
+      document.getElementById('sig-btn-red').className = mode === 'red'
+        ? 'touch-btn p-3.5 rounded-2xl font-black text-base border-4 border-red-600 bg-red-600 text-white shadow-md flex flex-col items-center'
+        : 'touch-btn p-3.5 rounded-2xl font-black text-base border-4 border-red-400 bg-white text-red-700 flex flex-col items-center';
+      document.getElementById('sig-btn-green').className = mode === 'green'
+        ? 'touch-btn p-3.5 rounded-2xl font-black text-base border-4 border-emerald-600 bg-emerald-600 text-white shadow-md flex flex-col items-center'
+        : 'touch-btn p-3.5 rounded-2xl font-black text-base border-4 border-emerald-400 bg-white text-emerald-700 flex flex-col items-center';
+      document.getElementById('sig-btn-blink').className = mode === 'blink'
+        ? 'touch-btn p-3.5 rounded-2xl font-black text-base border-4 border-amber-500 bg-amber-500 text-white shadow-md flex flex-col items-center'
+        : 'touch-btn p-3.5 rounded-2xl font-black text-base border-4 border-amber-400 bg-white text-amber-700 flex flex-col items-center';
+
+      lampGreen.classList.remove('blink-green');
+
+      if (mode === 'red') {
+        lampRed.style.opacity = '1';
+        lampRed.style.filter = 'drop-shadow(0 0 14px #ef4444)';
+        lampGreen.style.opacity = '0.2';
+        lampGreen.style.filter = 'none';
+        driverStatus.innerHTML = '🟢 綠燈（車輛行駛中）';
+        driverStatus.className = 'font-black text-emerald-400';
+        soundDesc.textContent = '很慢槌擊聲（叩... 叩...）';
+        ruleBox.className = 'bg-red-50 border-2 border-red-300 rounded-2xl p-4 space-y-1.5 text-red-950';
+        ruleBox.innerHTML = `
+          <div class="font-black text-lg text-red-700">🛑 「紅色人像燈」亮着時：</div>
+          <ul class="list-disc pl-5 font-bold text-sm sm:text-base space-y-1">
+            <li>不可橫過或開始橫過馬路，應站在行人路的過路處等候。</li>
+            <li><strong>即使馬路上沒有車輛行駛，仍然需要等候，不可橫過馬路！</strong></li>
+          </ul>`;
+      } else if (mode === 'green') {
+        lampRed.style.opacity = '0.2';
+        lampRed.style.filter = 'none';
+        lampGreen.style.opacity = '1';
+        lampGreen.style.filter = 'drop-shadow(0 0 14px #22c55e)';
+        driverStatus.innerHTML = '🔴 紅燈（車輛必須停車）';
+        driverStatus.className = 'font-black text-rose-400';
+        soundDesc.textContent = '連續「必必」聲響（必必必必...）';
+        ruleBox.className = 'bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 space-y-1.5 text-emerald-950';
+        ruleBox.innerHTML = `
+          <div class="font-black text-lg text-emerald-700">🚶 「綠色人像燈」亮定時：</div>
+          <ul class="list-disc pl-5 font-bold text-sm sm:text-base space-y-1">
+            <li>即使交通燈已亮紅燈，亦要提防有車輛衝燈繼續前駛。</li>
+            <li><strong>應確定所有車輛停定後，才可橫過馬路。</strong></li>
+            <li>過馬路途中，仍要小心留意車輛，切勿使用手機或嬉戲。</li>
+          </ul>`;
+      } else {
+        lampRed.style.opacity = '0.2';
+        lampRed.style.filter = 'none';
+        lampGreen.style.opacity = '1';
+        lampGreen.classList.add('blink-green');
+        driverStatus.innerHTML = '🔴 紅燈（即將轉燈，準備行車）';
+        driverStatus.className = 'font-black text-amber-400';
+        soundDesc.textContent = '間斷的「必必」聲響（必必... 必必...）';
+        ruleBox.className = 'bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 space-y-1.5 text-amber-950';
+        ruleBox.innerHTML = `
+          <div class="font-black text-lg text-amber-800">⚡ 「綠色人像燈」閃動時：</div>
+          <ul class="list-disc pl-5 font-bold text-sm sm:text-base space-y-1">
+            <li><strong>不可開始橫過馬路</strong>，應站在行人路上等候。</li>
+            <li>如已在橫過馬路途中，應繼續以<strong>正常步速向前行</strong>（切勿奔跑或折返）。</li>
+            <li>如站在<strong>安全島</strong>內，應繼續在安全島範圍內等候下一次綠燈。</li>
+          </ul>`;
+      }
+      playPedestrianSignalBeep(mode);
+    }
+
+    function playCurrentSignalSound() {
+      stopCantonese();
+      playPedestrianSignalBeep(currentSignal);
+    }
+
+    function speakCurrentSignalRule(btn) {
+      if (signalSoundTimer) {
+        clearInterval(signalSoundTimer);
+        signalSoundTimer = null;
+      }
+      const ruleText = document.getElementById('signal-rule-box').innerText;
+      speakCantonese(ruleText, btn);
+    }
+
+    function pressPedestrianButton() {
+      playTone(880, 'sine', 0.15, 0.3);
+      const ind = document.getElementById('wait-indicator');
+      const arrow = document.getElementById('tactile-arrow');
+      ind.textContent = '🔴 請等候 (WAIT)';
+      ind.className = 'w-full py-1 px-2 rounded-lg bg-red-600 text-white text-xs font-black mb-2';
+      arrow.classList.add('vibrating');
+      addStar('ped-btn-press', 1);
+      setTimeout(() => {
+        arrow.classList.remove('vibrating');
+        ind.textContent = '請按掣等候';
+        ind.className = 'w-full py-1 px-2 rounded-lg bg-slate-800 text-amber-400 text-xs font-black mb-2';
+      }, 2200);
+    }
+
+    // 過路設施詳解
+    const facilityData = {
+      zebra: {
+        title: '🦓 斑馬線設施（Zebra Crossing）',
+        points: [
+          '斑馬線兩端設有<strong>黃色圓球燈</strong>作為標記。',
+          '路面髹有黑白相間條紋，兩旁有熱塑或金屬路釘作為界限。',
+          '必須等候車輛在<strong>白色讓路線</strong>前停定後，才在黑白間條上直接橫過馬路。',
+          '<strong>嚴禁在斑馬線兩旁的白色「之」字線控制區範圍內過馬路！</strong>'
+        ],
+        svg: `<svg viewBox="0 0 360 140" class="w-full max-w-md mx-auto rounded-2xl bg-slate-700 border-2 border-slate-500">
+          <polyline points="15,35 45,25 75,35 105,25" fill="none" stroke="#fff" stroke-width="4"/>
+          <polyline points="15,105 45,115 75,105 105,115" fill="none" stroke="#fff" stroke-width="4"/>
+          <polyline points="255,35 285,25 315,35 345,25" fill="none" stroke="#fff" stroke-width="4"/>
+          <polyline points="255,105 285,115 315,105 345,115" fill="none" stroke="#fff" stroke-width="4"/>
+          <g fill="#fff"><rect x="135" y="22" width="90" height="12"/><rect x="135" y="44" width="90" height="12"/><rect x="135" y="66" width="90" height="12"/><rect x="135" y="88" width="90" height="12"/><rect x="135" y="110" width="90" height="12"/></g>
+          <circle cx="130" cy="14" r="8" fill="#facc15"/><circle cx="230" cy="126" r="8" fill="#facc15"/>
+          <text x="60" y="74" text-anchor="middle" fill="#fca5a5" font-size="11" font-weight="bold">之字線禁過</text>
+          <text x="300" y="74" text-anchor="middle" fill="#fca5a5" font-size="11" font-weight="bold">之字線禁過</text>
+        </svg>`
+      },
+      bridge: {
+        title: '🌉 行人天橋（Footbridge）',
+        points: [
+          '該段路面如有行人天橋，行人必須使用行人天橋橫過馬路，切勿在橋底橫穿馬路。',
+          '使用天橋能完全人車分隔，是最安全的過路方法之一。',
+          '切勿在天橋樓梯或斜道奔跑嬉戲。'
+        ],
+        svg: `<svg viewBox="0 0 360 130" class="w-full max-w-md mx-auto rounded-2xl bg-sky-200 border-2 border-sky-400">
+          <rect x="0" y="90" width="360" height="40" fill="#475569"/>
+          <rect x="60" y="38" width="240" height="18" fill="#2563eb"/>
+          <rect x="40" y="38" width="24" height="52" fill="#60a5fa"/><rect x="296" y="38" width="24" height="52" fill="#60a5fa"/>
+          <text x="180" y="26" text-anchor="middle" fill="#1e3a8a" font-weight="900" font-size="14">人車分隔・安全過馬路</text>
+        </svg>`
+      },
+      subway: {
+        title: '🚇 行人隧道（Subway）',
+        points: [
+          '該段路面設有行人隧道時，應使用行人隧道橫過馬路。',
+          '留意藍色「行人隧道 Subway」指示標誌進入隧道。',
+          '切勿在隧道口上方的馬路橫過。'
+        ],
+        svg: `<svg viewBox="0 0 360 130" class="w-full max-w-md mx-auto rounded-2xl bg-emerald-100 border-2 border-emerald-400">
+          <rect x="0" y="45" width="360" height="35" fill="#475569"/>
+          <path d="M90 80 L90 118 L270 118 L270 80" fill="none" stroke="#0284c7" stroke-width="14"/>
+          <rect x="130" y="10" width="100" height="26" rx="4" fill="#1d4ed8"/>
+          <text x="180" y="28" text-anchor="middle" fill="#fff" font-weight="bold" font-size="13">行人隧道 Subway</text>
+        </svg>`
+      },
+      island: {
+        title: '🏝️ 安全島（Refuge Island）',
+        points: [
+          '如果斑馬線或過路處中間設有安全島，行人須<strong>站在安全島範圍內</strong>停步。',
+          '切勿站在安全島旁邊的行車路面，或髹上白色斜線的路面上等候！',
+          '停步後，再次左右看清楚來車或燈號，才繼續橫過餘下路段。'
+        ],
+        svg: `<svg viewBox="0 0 360 130" class="w-full max-w-md mx-auto rounded-2xl bg-slate-700 border-2 border-slate-500">
+          <rect x="155" y="15" width="50" height="100" rx="20" fill="#cbd5e1" stroke="#facc15" stroke-width="3"/>
+          <circle cx="180" cy="55" r="9" fill="#fed7aa"/><rect x="171" y="65" width="18" height="22" rx="4" fill="#16a34a"/>
+          <text x="180" y="105" text-anchor="middle" fill="#0f172a" font-weight="900" font-size="11">站在島內</text>
+        </svg>`
+      },
+      tactile: {
+        title: '🟨 視障人士凹凸紋引導徑 / 警告條',
+        points: [
+          '<strong>方向指示地磚（長條紋）</strong>：引導視障人士沿安全路線直行。',
+          '<strong>危險警示地磚（大圓點）</strong>：提醒視障人士前面是行車道或梯級邊緣，必須停步！',
+          '<strong>位置地磚（小圓點）</strong>：表示方向轉變或設施位置（如行人過路按鈕）。'
+        ],
+        svg: `<svg viewBox="0 0 360 120" class="w-full max-w-md mx-auto rounded-2xl bg-white p-2 border-2 border-amber-300">
+          <g transform="translate(20,10)">
+            <rect width="85" height="75" fill="#facc15" stroke="#000" stroke-width="2"/>
+            <rect x="12" y="8" width="10" height="59" rx="4" fill="none" stroke="#000" stroke-width="2"/>
+            <rect x="37" y="8" width="10" height="59" rx="4" fill="none" stroke="#000" stroke-width="2"/>
+            <rect x="62" y="8" width="10" height="59" rx="4" fill="none" stroke="#000" stroke-width="2"/>
+            <text x="42" y="95" text-anchor="middle" font-size="12" font-weight="900">方向指示地磚</text>
+          </g>
+          <g transform="translate(137,10)">
+            <rect width="85" height="75" fill="#facc15" stroke="#000" stroke-width="2"/>
+            <circle cx="22" cy="22" r="8" fill="none" stroke="#000" stroke-width="2"/><circle cx="62" cy="22" r="8" fill="none" stroke="#000" stroke-width="2"/>
+            <circle cx="22" cy="53" r="8" fill="none" stroke="#000" stroke-width="2"/><circle cx="62" cy="53" r="8" fill="none" stroke="#000" stroke-width="2"/>
+            <text x="42" y="95" text-anchor="middle" font-size="12" font-weight="900">危險警示地磚</text>
+          </g>
+          <g transform="translate(254,10)">
+            <rect width="85" height="75" fill="#facc15" stroke="#000" stroke-width="2"/>
+            <circle cx="20" cy="20" r="4" fill="none" stroke="#000" stroke-width="2"/><circle cx="42" cy="20" r="4" fill="none" stroke="#000" stroke-width="2"/><circle cx="64" cy="20" r="4" fill="none" stroke="#000" stroke-width="2"/>
+            <circle cx="31" cy="38" r="4" fill="none" stroke="#000" stroke-width="2"/><circle cx="53" cy="38" r="4" fill="none" stroke="#000" stroke-width="2"/>
+            <circle cx="20" cy="56" r="4" fill="none" stroke="#000" stroke-width="2"/><circle cx="42" cy="56" r="4" fill="none" stroke="#000" stroke-width="2"/><circle cx="64" cy="56" r="4" fill="none" stroke="#000" stroke-width="2"/>
+            <text x="42" y="95" text-anchor="middle" font-size="12" font-weight="900">位置地磚</text>
+          </g>
+        </svg>`
+      }
+    };
+
+    function showFacilityDetail(key) {
+      playClickSound();
+      const keys = ['zebra', 'bridge', 'subway', 'island', 'tactile'];
+      document.querySelectorAll('.fac-tab').forEach((btn, idx) => {
+        btn.className = keys[idx] === key
+          ? 'fac-tab touch-btn p-3 rounded-2xl font-black text-sm bg-sky-600 text-white shadow'
+          : 'fac-tab touch-btn p-3 rounded-2xl font-black text-sm bg-slate-100 text-slate-700';
+      });
+      const d = facilityData[key];
+      document.getElementById('facility-detail-box').innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+          <div class="md:col-span-5">${d.svg}</div>
+          <div class="md:col-span-7 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-xl font-black text-sky-900">${d.title}</h3>
+              <button onclick="speakFacilityDetail('${key}', this)" class="touch-btn bg-amber-400 hover:bg-amber-500 text-slate-900 font-black px-3.5 py-1.5 rounded-xl text-xs sm:text-sm shadow flex items-center gap-1">
+                <span>🗣️</span><span>聽廣東話講解</span>
+              </button>
+            </div>
+            <ul class="list-disc pl-5 space-y-1.5 text-slate-800 font-bold text-sm sm:text-base">
+              ${d.points.map(p => `<li>${p}</li>`).join('')}
+            </ul>
+          </div>
+        </div>
+      `;
+    }
+
+    function speakFacilityDetail(key, btn) {
+      const d = facilityData[key];
+      if (!d) return;
+      speakCantonese(`${d.title}。${d.points.join('。')}`, btn);
+    }
+
+    // 過路六大守則拖拉與點擊排序
+    const sixCrossingRules = [
+      { step: 1, text: '首先選擇一處可以安全橫過馬路的地點，然後站定' },
+      { step: 2, text: '站在行人路旁邊' },
+      { step: 3, text: '環顧四周交通情況，留意來往的車輛及仔細聆聽' },
+      { step: 4, text: '如有車輛駛近，先讓車輛駛過，再小心察看四周' },
+      { step: 5, text: '確定沒有車輛駛近，就直線橫過馬路' },
+      { step: 6, text: '橫過馬路時，仍要小心留意路面情況和聆聽' }
+    ];
+
+    let placedRules = [null, null, null, null, null, null];
+    let selectedRuleStep = null;
+
+    function resetRulesOrder() {
+      playClickSound();
+      placedRules = [null, null, null, null, null, null];
+      selectedRuleStep = null;
+      document.getElementById('rules-feedback').textContent = '';
+      renderRulesGame();
+    }
+
+    function renderRulesGame() {
+      const slotsEl = document.getElementById('rules-slots');
+      const poolEl = document.getElementById('rules-pool');
+
+      slotsEl.innerHTML = placedRules.map((rule, idx) => `
+        <div onclick="handleSlotClick(${idx})"
+             ondragover="event.preventDefault(); this.classList.add('highlight-zone')"
+             ondragleave="this.classList.remove('highlight-zone')"
+             ondrop="handleSlotDrop(event, ${idx})"
+             class="drop-zone touch-btn p-3 rounded-2xl border-2 ${rule ? 'border-sky-500 bg-sky-50' : 'border-dashed border-slate-400 bg-white'} flex items-center gap-3 min-h-[68px]">
+          <span class="w-8 h-8 rounded-full bg-sky-600 text-white font-black flex items-center justify-center shrink-0">${idx + 1}</span>
+          <span class="text-sm font-bold ${rule ? 'text-slate-900' : 'text-slate-400'}">
+            ${rule ? rule.text : '點擊或拖拉守則到此處'}
+          </span>
+        </div>
+      `).join('');
+
+      const placedSteps = new Set(placedRules.filter(Boolean).map(r => r.step));
+      const remaining = sixCrossingRules.filter(r => !placedSteps.has(r.step));
+      // 固定偽隨機順序避免每次點擊亂跳
+      const shuffled = [...remaining].sort((a, b) => ((a.step * 7) % 5) - ((b.step * 7) % 5));
+
+      poolEl.innerHTML = shuffled.map(r => `
+        <div draggable="true"
+             ondragstart="event.dataTransfer.setData('text/plain', ${r.step})"
+             onclick="selectPoolRule(${r.step})"
+             class="drag-card touch-btn p-3 rounded-2xl bg-white border-2 ${selectedRuleStep === r.step ? 'border-amber-500 bg-amber-50 selected-item' : 'border-slate-300'} shadow-sm text-sm font-bold text-slate-800 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-amber-500">☰</span>
+            <span>${r.text}</span>
+          </div>
+          <button onclick="event.stopPropagation(); speakCantonese('${r.text}', this)" aria-label="讀出守則" class="shrink-0 bg-amber-200 hover:bg-amber-300 text-slate-900 px-2.5 py-1.5 rounded-xl text-xs font-black">
+            🗣️
+          </button>
+        </div>
+      `).join('') || '<div class="text-sm font-bold text-emerald-700 col-span-full text-center py-2">所有卡片已放入格內，請按「檢查我的排序」！</div>';
+    }
+
+    function selectPoolRule(step) {
+      playClickSound();
+      selectedRuleStep = (selectedRuleStep === step) ? null : step;
+      renderRulesGame();
+    }
+
+    function handleSlotDrop(e, slotIdx) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('highlight-zone');
+      const step = parseInt(e.dataTransfer.getData('text/plain'), 10);
+      placeRuleInSlot(step, slotIdx);
+    }
+
+    function handleSlotClick(slotIdx) {
+      if (selectedRuleStep !== null) {
+        placeRuleInSlot(selectedRuleStep, slotIdx);
+        selectedRuleStep = null;
+      } else if (placedRules[slotIdx] !== null) {
+        // 點擊已放好的格子可退回卡片區
+        playClickSound();
+        placedRules[slotIdx] = null;
+        renderRulesGame();
+      }
+    }
+
+    function placeRuleInSlot(step, slotIdx) {
+      playClickSound();
+      const ruleObj = sixCrossingRules.find(r => r.step === step);
+      if (!ruleObj) return;
+      // 若該格已有卡片則自動退回
+      placedRules[slotIdx] = ruleObj;
+      renderRulesGame();
+    }
+
+    function checkRulesOrder() {
+      const fb = document.getElementById('rules-feedback');
+      if (placedRules.some(r => r === null)) {
+        playErrorSound();
+        fb.className = 'font-black text-base text-amber-700';
+        fb.textContent = '⚠️ 請先把全部 6 張守則卡片放進 1 至 6 的空格中！';
+        return;
+      }
+      const isAllCorrect = placedRules.every((r, idx) => r.step === idx + 1);
+      if (isAllCorrect) {
+        playSuccessSound();
+        addStar('six-rules-complete', 2);
+        fb.className = 'font-black text-base text-emerald-700';
+        fb.textContent = '🎉 100% 完全正確！你已經掌握過路六大守則了！(+2⭐)';
+      } else {
+        playErrorSound();
+        fb.className = 'font-black text-base text-rose-700';
+        fb.textContent = '❌ 順序還差一點點！提示：先選地點站定 → 站行人路旁 → 環顧聆聽 → 讓車先過 → 無車直線過 → 途中仍要小心。';
+      }
+    }
+
+    // =========================================================
+    // 5. 第三站：交通標誌配對館（SVG 標誌庫）
+    // =========================================================
+    const trafficSigns = [
+      {
+        id: 'stop',
+        cat: 'road',
+        name: '停車及讓路',
+        desc: '八角形紅底白字「STOP 停」標誌，駕駛者必須在白線前完全停車，讓大路車輛先行。',
+        svg: `<svg viewBox="0 0 100 100" class="w-16 h-16"><polygon points="30,5 70,5 95,30 95,70 70,95 30,95 5,70 5,30" fill="#ef4444" stroke="#ffffff" stroke-width="4"/><text x="50" y="46" text-anchor="middle" fill="#fff" font-weight="900" font-size="20">STOP</text><text x="50" y="76" text-anchor="middle" fill="#fff" font-weight="900" font-size="24">停</text></svg>`
+      },
+      {
+        id: 'no_entry',
+        cat: 'road',
+        name: '所有車輛不准駛入',
+        desc: '紅底圓形中間有一條白色橫槓，表示所有車輛均不准駛入該路段。',
+        svg: `<svg viewBox="0 0 100 100" class="w-16 h-16"><circle cx="50" cy="50" r="44" fill="#ef4444" stroke="#fff" stroke-width="3"/><rect x="16" y="40" width="68" height="20" rx="4" fill="#ffffff"/></svg>`
+      },
+      {
+        id: 'school_patrol',
+        cat: 'ped',
+        name: '車輛須於標誌前停車（學校交通安全隊使用的標誌）',
+        desc: '黃底紅邊圓形標誌，由學校交通安全隊隊員手持，示意車輛必須在標誌前停下讓學生橫過馬路。',
+        svg: `<svg viewBox="0 0 100 100" class="w-16 h-16"><circle cx="50" cy="50" r="42" fill="#facc15" stroke="#ef4444" stroke-width="10"/><text x="50" y="30" text-anchor="middle" fill="#1e293b" font-weight="900" font-size="11">STOP</text><text x="50" y="45" text-anchor="middle" fill="#1e293b" font-weight="900" font-size="14">停</text><rect x="24" y="49" width="52" height="8" rx="4" fill="#1e293b"/><circle cx="43" cy="64" r="3.5" fill="#1e293b"/><line x1="43" y1="68" x2="43" y2="79" stroke="#1e293b" stroke-width="4"/><circle cx="56" cy="62" r="4" fill="#1e293b"/><line x1="56" y1="66" x2="56" y2="79" stroke="#1e293b" stroke-width="4"/></svg>`
+      },
+      {
+        id: 'no_stopping',
+        cat: 'road',
+        name: '不准停車',
+        desc: '藍底紅邊加上紅色大交叉，表示車輛在該處任何時間均不准停車上落客貨。',
+        svg: `<svg viewBox="0 0 100 100" class="w-16 h-16"><circle cx="50" cy="50" r="42" fill="#0284c7" stroke="#ef4444" stroke-width="10"/><line x1="22" y1="22" x2="78" y2="78" stroke="#ef4444" stroke-width="10"/><line x1="78" y1="22" x2="22" y2="78" stroke="#ef4444" stroke-width="10"/></svg>`
+      },
+      {
+        id: 'speed_50',
+        cat: 'road',
+        name: '速度限制（以公里每小時為單位）',
+        desc: '紅圈白底黑字「50」，表示該路段最高車速限制為每小時 50 公里。',
+        svg: `<svg viewBox="0 0 100 100" class="w-16 h-16"><circle cx="50" cy="50" r="42" fill="#ffffff" stroke="#ef4444" stroke-width="10"/><text x="50" y="63" text-anchor="middle" fill="#1e293b" font-weight="900" font-size="36">50</text></svg>`
+      },
+      {
+        id: 'ped_ahead',
+        cat: 'ped',
+        name: '前面有行人過路處',
+        desc: '紅邊白底三角形警告標誌，提醒駕駛者前面設有行人過路處，需減速留意行人。',
+        svg: `<svg viewBox="0 0 100 100" class="w-16 h-16"><polygon points="50,10 92,86 8,86" fill="#ffffff" stroke="#ef4444" stroke-width="9" stroke-linejoin="round"/><circle cx="50" cy="40" r="5" fill="#1e293b"/><path d="M50 46 L42 74 M50 46 L58 74 M42 54 L58 54" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/><line x1="26" y1="78" x2="74" y2="78" stroke="#1e293b" stroke-width="3" stroke-dasharray="6 4"/></svg>`
+      },
+      {
+        id: 'no_ped',
+        cat: 'ped',
+        name: '行人止步',
+        desc: '紅圈白底黑人形加紅色斜線，表示禁止行人進入該道路或隧道。',
+        svg: `<svg viewBox="0 0 100 100" class="w-16 h-16"><circle cx="50" cy="50" r="42" fill="#ffffff" stroke="#ef4444" stroke-width="10"/><circle cx="50" cy="30" r="6" fill="#1e293b"/><path d="M50 38 L42 72 M50 38 L58 72 M40 48 L60 48" stroke="#1e293b" stroke-width="6" stroke-linecap="round"/><line x1="22" y1="22" x2="78" y2="78" stroke="#ef4444" stroke-width="10"/></svg>`
+      },
+      {
+        id: 'ped_blackspot',
+        cat: 'ped',
+        name: '前面有行人交通意外黑點',
+        desc: '三角形警告標誌，內有行人與車頭碰撞圖案，提醒前面曾發生多宗行人交通意外，必須格外小心。',
+        svg: `<svg viewBox="0 0 100 100" class="w-16 h-16"><polygon points="50,10 92,86 8,86" fill="#ffffff" stroke="#ef4444" stroke-width="9" stroke-linejoin="round"/><circle cx="38" cy="44" r="5" fill="#1e293b"/><path d="M38 50 L32 76 M38 50 L45 76" stroke="#1e293b" stroke-width="4.5" stroke-linecap="round"/><rect x="56" y="58" width="22" height="18" rx="3" fill="#1e293b"/><path d="M48 52 L54 60 L47 68" fill="none" stroke="#ef4444" stroke-width="3"/></svg>`
+      },
+      {
+        id: 'reversing_veh',
+        cat: 'ped',
+        name: '小心倒後的車輛',
+        desc: '三角形警告標誌，提醒行人留意前面可能有正在倒車的貨車或車輛，切勿走近車尾盲點。',
+        svg: `<svg viewBox="0 0 100 100" class="w-16 h-16"><polygon points="50,10 92,86 8,86" fill="#ffffff" stroke="#ef4444" stroke-width="9" stroke-linejoin="round"/><rect x="48" y="45" width="26" height="24" fill="#1e293b"/><circle cx="58" cy="73" r="5" fill="#1e293b"/><circle cx="34" cy="54" r="4" fill="#1e293b"/><line x1="34" y1="59" x2="34" y2="76" stroke="#1e293b" stroke-width="4"/><path d="M64 36 L44 36 L50 30 M44 36 L50 42" fill="none" stroke="#1e293b" stroke-width="3.5"/></svg>`
+      },
+      {
+        id: 'accessible',
+        cat: 'ped',
+        name: '國際暢通易達標誌（前往適合行動不便人士使用設施的路線或入口）',
+        desc: '藍底白色輪椅標誌，表示設有供輪椅使用者及行動不便人士使用的無障礙設施或路線。',
+        svg: `<svg viewBox="0 0 100 100" class="w-16 h-16"><rect x="8" y="15" width="84" height="70" rx="12" fill="#0369a1" stroke="#fff" stroke-width="3"/><circle cx="46" cy="32" r="6" fill="#fff"/><path d="M46 40 L46 58 L64 58 L69 72" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 52 A14 14 0 1 0 56 68" fill="none" stroke="#fff" stroke-width="5"/></svg>`
+      }
+    ];
+
+    function renderSignsGallery(filter = 'all') {
+      const gallery = document.getElementById('signs-gallery');
+      const list = filter === 'all' ? trafficSigns : trafficSigns.filter(s => s.cat === filter);
+      gallery.innerHTML = list.map(s => `
+        <button onclick="inspectSign('${s.id}')" class="touch-btn bg-slate-50 hover:bg-amber-50 border-2 border-slate-200 hover:border-amber-400 rounded-2xl p-3.5 flex flex-col items-center text-center shadow-sm">
+          ${s.svg}
+          <span class="text-xs sm:text-sm font-black text-slate-800 mt-2 line-clamp-2">${s.name}</span>
+        </button>
+      `).join('');
+    }
+
+    function filterSigns(cat) {
+      playClickSound();
+      const cats = ['all', 'ped', 'road'];
+      document.querySelectorAll('.sign-filter').forEach((btn, idx) => {
+        btn.className = cats[idx] === cat
+          ? 'sign-filter touch-btn px-3.5 py-2 rounded-xl font-black text-sm bg-rose-600 text-white'
+          : 'sign-filter touch-btn px-3.5 py-2 rounded-xl font-black text-sm bg-slate-100 text-slate-700';
+      });
+      renderSignsGallery(cat);
+    }
+
+    function inspectSign(id) {
+      playClickSound();
+      const s = trafficSigns.find(x => x.id === id);
+      document.getElementById('inspector-svg').innerHTML = s.svg;
+      document.getElementById('inspector-title').textContent = s.name;
+      document.getElementById('inspector-desc').textContent = s.desc;
+      addStar(`sign-inspect-${id}`, 1);
+      speakCantonese(`${s.name}。${s.desc}`);
+    }
+
+    // 第三站：觸控拖拉/點擊配對小遊戲
+    let matchGameItems = [];
+    let selectedMatchSignId = null;
+    let matchedSignIds = new Set();
+
+    function initSignMatchGame() {
+      playClickSound();
+      selectedMatchSignId = null;
+      matchedSignIds.clear();
+      document.getElementById('match-game-status').textContent = '';
+
+      const shuffled = [...trafficSigns].sort(() => Math.random() - 0.5).slice(0, 4);
+      matchGameItems = shuffled;
+      const shuffledLabels = [...shuffled].sort(() => Math.random() - 0.5);
+
+      const signsCol = document.getElementById('match-signs-col');
+      const labelsCol = document.getElementById('match-labels-col');
+
+      signsCol.innerHTML = matchGameItems.map(s => `
+        <div id="m-sign-${s.id}"
+             draggable="true"
+             ondragstart="event.dataTransfer.setData('text/plain', '${s.id}')"
+             onclick="selectMatchSign('${s.id}')"
+             class="drag-card touch-btn bg-slate-50 border-3 border-slate-300 rounded-2xl p-4 flex flex-col items-center justify-center shadow">
+          ${s.svg}
+          <span class="text-xs font-bold text-slate-500 mt-1">拖拉或點擊我</span>
+        </div>
+      `).join('');
+
+      labelsCol.innerHTML = shuffledLabels.map(s => `
+        <div id="m-label-${s.id}"
+             ondragover="event.preventDefault(); this.classList.add('highlight-zone')"
+             ondragleave="this.classList.remove('highlight-zone')"
+             ondrop="handleMatchDrop(event, '${s.id}')"
+             onclick="selectMatchTarget('${s.id}')"
+             class="drop-zone touch-btn p-4 rounded-2xl border-2 border-dashed border-purple-400 bg-purple-50/60 font-black text-sm sm:text-base text-slate-800 flex items-center justify-between gap-2">
+          <span>${s.name}</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="event.stopPropagation(); speakCantonese('${s.name}', this)" class="bg-amber-300 hover:bg-amber-400 text-slate-900 px-2.5 py-1 rounded-xl text-xs font-black">🗣️ 讀字詞</button>
+            <span id="m-badge-${s.id}" class="text-xs text-purple-600 font-bold">放置於此</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectMatchSign(id) {
+      if (matchedSignIds.has(id)) return;
+      playClickSound();
+      selectedMatchSignId = (selectedMatchSignId === id) ? null : id;
+      matchGameItems.forEach(s => {
+        const el = document.getElementById(`m-sign-${s.id}`);
+        if (!matchedSignIds.has(s.id)) {
+          el.classList.toggle('selected-item', selectedMatchSignId === s.id);
+        }
+      });
+    }
+
+    function handleMatchDrop(e, targetId) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('highlight-zone');
+      const draggedId = e.dataTransfer.getData('text/plain');
+      attemptSignMatch(draggedId, targetId);
+    }
+
+    function selectMatchTarget(targetId) {
+      if (selectedMatchSignId) {
+        attemptSignMatch(selectedMatchSignId, targetId);
+      }
+    }
+
+    function attemptSignMatch(signId, targetId) {
+      if (matchedSignIds.has(targetId)) return;
+      if (signId === targetId) {
+        playSuccessSound();
+        matchedSignIds.add(signId);
+        selectedMatchSignId = null;
+        const signEl = document.getElementById(`m-sign-${signId}`);
+        signEl.className = 'touch-btn bg-emerald-100 border-2 border-emerald-500 rounded-2xl p-4 flex flex-col items-center justify-center opacity-60';
+        const targetEl = document.getElementById(`m-label-${targetId}`);
+        targetEl.className = 'touch-btn p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-100 font-black text-sm sm:text-base text-emerald-900 flex items-center justify-between';
+        document.getElementById(`m-badge-${targetId}`).textContent = '✅ 配對成功';
+
+        if (matchedSignIds.size === matchGameItems.length) {
+          addStar('sign-match-round', 2);
+          document.getElementById('match-game-status').textContent = '🎉 太厲害了！全部交通標誌配對成功！(+2⭐)';
+        }
+      } else {
+        playErrorSound();
+        const targetEl = document.getElementById(`m-label-${targetId}`);
+        targetEl.classList.add('bg-rose-100');
+        setTimeout(() => targetEl.classList.remove('bg-rose-100'), 400);
+      }
+    }
+
+    // =========================================================
+    // 6. 第四站：乘客安全守護者（五大交通工具）
+    // =========================================================
+    const vehicleModules = {
+      bus: {
+        title: '🚌 乘搭巴士安全守則（候車、上車、車程中、下車）',
+        color: 'red',
+        rules: [
+          { stage: '候車時', ok: true, text: '在巴士站排隊候車，切勿站近行人路邊緣，亦切勿走出馬路截停駛離的巴士。' },
+          { stage: '上車時', ok: false, text: '站立在巴士上層、樓梯或出入口附近的黃線以外。' },
+          { stage: '車程中', ok: true, text: '站立時緊握扶手；座位設有安全帶必須佩戴；主動讓座給長者、孕婦及殘疾人士。' },
+          { stage: '車程中', ok: false, text: '與巴士司機談話分散其注意力，或在非緊急情況下把玩緊急出口。' },
+          { stage: '下車時', ok: false, text: '在車門正在打開或關閉時下車，或下車後靠近巴士車頭或車尾橫過馬路（應待巴士離去並看清兩邊才過馬路）。' }
+        ]
+      },
+      minibus: {
+        title: '🚐 乘搭公共小型巴士及的士安全守則',
+        color: 'emerald',
+        rules: [
+          { stage: '候車上車', ok: true, text: '在安全地方（如的士站、綠色專線小巴站或紅色小巴站）候車；待車輛停定及司機開門才上車。' },
+          { stage: '行車安全', ok: true, text: '如座位裝有安全帶，必須時刻佩戴安全帶。' },
+          { stage: '的士禮儀', ok: true, text: '乘搭的士時宜預先指示司機地點及路線，行車途中除非發出指示，否則不可與司機談話。' },
+          { stage: '小巴下車', ok: true, text: '乘搭小巴中途下車，應按動下車電鈴或預早通知司機，並待小巴完全停定才離開座位。' }
+        ]
+      },
+      tram: {
+        title: '🚋 乘搭電車及輕鐵車輛安全守則',
+        color: 'teal',
+        rules: [
+          { stage: '有安全島的電車站', ok: true, text: '如電車站設有安全島，應使用與安全島相連的行人天橋或行人過路處往返。' },
+          { stage: '無安全島的電車站', ok: true, text: '先在行人路上等候，待電車停定及其他車輛在黃色「停車」線前停下後，才可橫過馬路登上電車。' },
+          { stage: '電車車廂內', ok: false, text: '在電車未停定時登車/下車、在梯級或上層站立、與司機談話或觸碰車上控制器。' },
+          { stage: '輕鐵月台', ok: true, text: '使用行人天橋、隧道或「綠色人像」過路處往返月台；在黃線後面排隊，先讓乘客下車後上車。' }
+        ]
+      },
+      car: {
+        title: '🚗 私家車乘客安全守則',
+        color: 'blue',
+        rules: [
+          { stage: '上落車位置', ok: true, text: '在私家車完全停定後，盡量在行人路旁的一邊上落車；切勿在妨礙行人或有來車時開啟車門。' },
+          { stage: '車內安全', ok: true, text: '安座後立即扣上安全帶，所有乘客均須時刻佩戴。' },
+          { stage: '車窗與車門', ok: false, text: '把物件拋出窗外、將頭手伸出窗外，或觸碰車上控制器及車門門鎖。' },
+          { stage: '安全氣袋', ok: true, text: '如車輛裝有安全氣袋，應與氣袋出口保持適當距離，如無必要不要靠近。' }
+        ]
+      },
+      schoolbus: {
+        title: '🚌 乘搭校巴及保姆車安全守則',
+        color: 'amber',
+        rules: [
+          { stage: '上落車秩序', ok: true, text: '車未停定切勿上車或落車；上落車要守秩序，並聽從保姆及司機的指示。' },
+          { stage: '車廂行為', ok: true, text: '扣上安全帶（如有），車輛行駛時切勿離座嬉戲、飲食或玩耍。' },
+          { stage: '嚴禁危險動作', ok: false, text: '把玩太平門（緊急出口）、與司機談話、或將頭、手或身體任何部分伸出窗外。' },
+          { stage: '下車後安全', ok: true, text: '下車後須在行人路上等候家人並與校巴保持安全距離，回家途中切勿嬉戲。' }
+        ]
+      }
+    };
+
+    function selectVehicle(vKey) {
+      playClickSound();
+      const keys = ['bus', 'minibus', 'tram', 'car', 'schoolbus'];
+      document.querySelectorAll('.veh-tab').forEach((btn, idx) => {
+        btn.className = keys[idx] === vKey
+          ? 'veh-tab touch-btn p-3 rounded-2xl font-black text-sm sm:text-base bg-teal-600 text-white shadow-md'
+          : 'veh-tab touch-btn p-3 rounded-2xl font-black text-sm sm:text-base bg-slate-100 text-slate-700';
+      });
+
+      const mod = vehicleModules[vKey];
+      addStar(`veh-${vKey}`, 1);
+      document.getElementById('vehicle-content-area').innerHTML = `
+        <div class="bg-slate-50 rounded-3xl p-5 border-2 border-teal-200 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-xl sm:text-2xl font-black text-teal-900">${mod.title}</h3>
+            <button onclick="speakVehicleAll('${vKey}', this)" class="touch-btn bg-amber-400 hover:bg-amber-500 text-slate-900 font-black px-4 py-2 rounded-2xl text-sm shadow flex items-center gap-1.5">
+              <span>🗣️</span><span>讀出全部守則</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            ${mod.rules.map((r, i) => `
+              <div class="p-4 rounded-2xl bg-white border-2 ${r.ok ? 'border-emerald-300' : 'border-rose-300'} shadow-sm flex items-start justify-between gap-3">
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 rounded-xl ${r.ok ? 'bg-emerald-500' : 'bg-rose-500'} text-white font-black text-xl flex items-center justify-center shrink-0">
+                    ${r.ok ? '✓' : '✗'}
+                  </div>
+                  <div>
+                    <span class="inline-block text-xs font-black px-2 py-0.5 rounded-md ${r.ok ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'} mb-1">
+                      ${r.stage}・${r.ok ? '正確做法' : '切勿這樣做'}
+                    </span>
+                    <p class="text-sm sm:text-base font-bold text-slate-800 leading-relaxed">${r.text}</p>
+                  </div>
+                </div>
+                <button onclick="speakCantonese('${r.stage}，${r.ok ? '正確做法' : '切勿這樣做'}：${r.text}', this)" aria-label="讀出守則" class="touch-btn shrink-0 bg-amber-200 hover:bg-amber-300 text-slate-900 px-3 py-1.5 rounded-xl text-xs font-black">
+                  🗣️
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function speakVehicleAll(vKey, btn) {
+      const mod = vehicleModules[vKey];
+      if (!mod) return;
+      const full = mod.rules.map(r => `${r.stage}，${r.ok ? '正確做法' : '切勿這樣做'}：${r.text}`).join('。');
+      speakCantonese(`${mod.title}。${full}`, btn);
+    }
+
+    // =========================================================
+    // 7. 第五站：道路安全專章模擬大考場（完整 30 題考卷 + 廣東話讀題）
+    // =========================================================
+    // 7. 第五站：道路安全專章模擬大考場（完整 30 題考卷）
+    // =========================================================
+    const examPart1Data = [
+      { id: 'A', ans: '斑馬線' },
+      { id: 'B', ans: '行人隧道' },
+      { id: 'C', ans: '行人天橋' },
+      { id: 'D', ans: '人像燈' }
+    ];
+    const part1Options = ['斑馬線', '行人隧道', '行人天橋', '人像燈'];
+
+    const examPart2Groups = [
+      {
+        groupName: '（A 組）禁制及停車標誌',
+        items: [
+          { signId: 'stop', ans: '停車及讓路' },
+          { signId: 'no_entry', ans: '所有車輛不准駛入' },
+          { signId: 'school_patrol', ans: '車輛須於標誌前停車（學校交通安全隊使用的標誌）' },
+          { signId: 'no_stopping', ans: '不准停車' }
+        ],
+        choices: [
+          '所有車輛不准駛入',
+          '不准停車',
+          '停車及讓路',
+          '車輛須於標誌前停車（學校交通安全隊使用的標誌）'
+        ]
+      },
+      {
+        groupName: '（B 組）速度限制及行人警告標誌',
+        items: [
+          { signId: 'speed_50', ans: '速度限制（以公里每小時為單位）' },
+          { signId: 'ped_ahead', ans: '前面有行人過路處' },
+          { signId: 'no_ped', ans: '行人止步' },
+          { signId: 'ped_blackspot', ans: '前面有行人交通意外黑點' }
+        ],
+        choices: [
+          '行人止步',
+          '前面有行人交通意外黑點',
+          '速度限制（以公里每小時為單位）',
+          '前面有行人過路處'
+        ]
+      }
+    ];
+
+    const examPart3MC = [
+      {
+        q: '1. 在行人過路設施（如斑馬線、行人天橋等）多少米範圍內，行人必需使用該設施橫過馬路？',
+        options: ['A. 5米', 'B. 15米', 'C. 10米'],
+        ans: 1
+      },
+      {
+        q: '2. 電子行人過路發聲裝置發出間斷的「必必」聲響，代表什麼行人過路燈狀態？',
+        options: ['A. 「綠色人像」燈號在閃動', 'B. 「綠色人像」燈號已經亮定', 'C. 「紅色人像」燈號正在亮着'],
+        ans: 0
+      },
+      {
+        q: '3. 在天黑或光線不足時，行人應：',
+        options: ['A. 穿着或攜帶熒光布料的衣服或物件', 'B. 穿着或攜帶白色、淺色或反光的衣服或物件', 'C. 以上皆是'],
+        ans: 1
+      },
+      {
+        q: '4. 使用安全島橫過馬路，行人應該：',
+        options: ['A. 站在安全島範圍內', 'B. 站在安全島旁邊的路面等候', 'C. 站在髹上白色斜線的路面等候'],
+        ans: 0
+      },
+      {
+        q: '5. 以下行人安全正確的是：',
+        options: ['A. 從兩車輛之間衝出馬路', 'B. 可在馬路上奔跑', 'C. 不可攀越欄杆'],
+        ans: 2
+      },
+      {
+        q: '6. 「過馬路守則」有六點基本步驟：(1)如有車輛駛近，先讓其駛過，再察看四周。(2)站在行人路旁邊。(3)首先選擇一處可以安全橫過馬路的地點，然後站定。(4)環顧四周交通情況，小心聆聽。(5)過馬路時，仍要小心察看和聆聽。(6)如沒有車輛駛近，便直線步過馬路。請順序排列：',
+        options: ['A. (3), (1), (2), (4), (5), (6)', 'B. (3), (4), (2), (6), (1), (5)', 'C. (3), (2), (4), (1), (6), (5)'],
+        ans: 2
+      },
+      {
+        q: '7. 紅色人像過路燈號亮着時表示什麼？',
+        signId: 'red_man_custom',
+        options: ['A. 切勿開步橫過', 'B. 切勿橫過', 'C. 小心橫過'],
+        ans: 0
+      },
+      {
+        q: '8. 圖中交通標誌表示什麼？',
+        signId: 'no_ped',
+        options: ['A. 行人專用區終止', 'B. 行人止步', 'C. 行人不准在此過路'],
+        ans: 1
+      },
+      {
+        q: '9. 設有黃色指路燈（黃色圓球燈）表示：',
+        options: ['A. 行人過路處在前', 'B. 路面濕滑，小心駕駛', 'C. 所在處設有「斑馬線」'],
+        ans: 2
+      },
+      {
+        q: '10. 圖中交通標誌表示什麼？',
+        signId: 'accessible',
+        options: ['A. 傷殘人士專用停車處', 'B. 前往適合行動不便人士使用設施的路線或入口', 'C. 傷殘乘客上落處'],
+        ans: 1
+      }
+    ];
+
+    const examPart4TF = [
+      { text: '1. 把玩車門緊急出口', ans: false, icon: '🚪' },
+      { text: '2. 車未停定，上車或落車', ans: false, icon: '🏃‍♂️' },
+      { text: '3. 車輛行駛時，不離開座位', ans: true, icon: '💺' },
+      { text: '4. 乘車途中與司機談話或大聲呼叫', ans: false, icon: '🗣️' },
+      { text: '5. 將頭、手或身體任何部分伸出窗外', ans: false, icon: '🪟' },
+      { text: '6. 學童下車後，保持安全的距離', ans: true, icon: '🧍' },
+      { text: '7. 乘車時玩耍', ans: false, icon: '🤖' },
+      { text: '8. 在車廂內飲食', ans: false, icon: '🍔' }
+    ];
+
+    let userExamAnswers = { p1: {}, p2: {}, p3: {}, p4: {} };
+    let examSubmitted = false;
+
+    function speakExamP1(id, btn) {
+      speakCantonese(`第一部分填充題，請問街道圖中紅圈 ${id} 是什麼過路設施？選項有：斑馬線、行人隧道、行人天橋、或者人像燈。`, btn);
+    }
+
+    function speakExamP2(gIdx, iIdx, btn) {
+      const grp = examPart2Groups[gIdx];
+      const choicesText = grp.choices.map((c, idx) => `第${idx + 1}個，${c}`).join('；');
+      speakCantonese(`第二部分交通標誌配對，${grp.groupName}，第 ${iIdx + 1} 題。請為左邊的交通標誌選擇正確字詞：${choicesText}。`, btn);
+    }
+
+    function speakExamP3Question(qIdx, btn) {
+      const item = examPart3MC[qIdx];
+      if (!item) return;
+      const optsText = item.options.join('。');
+      speakCantonese(`第三部分選擇題，第 ${item.q}。${optsText}。`, btn);
+    }
+
+    function speakExamP4Question(tIdx, btn) {
+      const item = examPart4TF[tIdx];
+      if (!item) return;
+      speakCantonese(`第四部分乘客安全判斷題，第 ${item.text}。請問這個行為是正確定不正確？`, btn);
+    }
+
+    function speakExamSummary(btn) {
+      const title = document.getElementById('exam-score-title').textContent;
+      const msg = document.getElementById('exam-score-msg').textContent;
+      speakCantonese(`${title}。${msg}`, btn);
+    }
+
+    function renderFullExam() {
+      // 第一部分
+      document.getElementById('exam-part1-container').innerHTML = examPart1Data.map(item => `
+        <div id="ex-p1-card-${item.id}" class="bg-white p-3.5 rounded-2xl border-2 border-sky-200 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="font-black text-base text-sky-900">紅圈 ${item.id} 是什麼設施？</div>
+            <button onclick="speakExamP1('${item.id}', this)" class="touch-btn bg-amber-300 hover:bg-amber-400 text-slate-900 font-black px-3 py-1.5 rounded-xl text-xs shadow flex items-center gap-1 shrink-0">
+              <span>🗣️</span><span>讀題目</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5">
+            ${part1Options.map(opt => `
+              <button onclick="selectExamP1('${item.id}', '${opt}')"
+                      class="p1-btn-${item.id} touch-btn py-2 px-2 rounded-xl text-xs sm:text-sm font-black border-2 ${userExamAnswers.p1[item.id] === opt ? 'bg-sky-600 text-white border-sky-600' : 'bg-slate-50 text-slate-700 border-slate-200'}">
+                ${opt}
+              </button>
+            `).join('')}
+          </div>
+          <div id="ex-p1-fb-${item.id}" class="text-xs font-black"></div>
+        </div>
+      `).join('');
+
+      // 第二部分
+      document.getElementById('exam-part2-container').innerHTML = examPart2Groups.map((grp, gIdx) => `
+        <div class="bg-white p-4 rounded-2xl border-2 border-amber-200">
+          <h4 class="font-black text-base text-amber-800 mb-3">${grp.groupName}</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            ${grp.items.map((it, iIdx) => {
+              const key = `${gIdx}-${iIdx}`;
+              const signObj = trafficSigns.find(s => s.id === it.signId);
+              return `
+                <div id="ex-p2-card-${key}" class="p-3 rounded-2xl bg-slate-50 border-2 border-slate-200 flex items-center gap-3">
+                  <div class="shrink-0">${signObj.svg}</div>
+                  <div class="flex-1 space-y-1.5">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-xs font-black text-slate-500">第 ${iIdx + 1} 題</span>
+                      <button onclick="speakExamP2(${gIdx}, ${iIdx}, this)" class="bg-amber-300 hover:bg-amber-400 text-slate-900 font-black px-2.5 py-1 rounded-xl text-xs shadow flex items-center gap-1">
+                        <span>🗣️</span><span>讀題目與選項</span>
+                      </button>
+                    </div>
+                    <select onchange="selectExamP2('${key}', this.value)" class="w-full p-2.5 rounded-xl border-2 border-amber-300 bg-white font-bold text-xs sm:text-sm text-slate-800">
+                      <option value="">-- 請選擇對應字詞 --</option>
+                      ${grp.choices.map(c => `<option value="${c}" ${userExamAnswers.p2[key] === c ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
+                    <div id="ex-p2-fb-${key}" class="text-xs font-black"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      // 第三部分
+      document.getElementById('exam-part3-container').innerHTML = examPart3MC.map((item, qIdx) => {
+        let signHtml = '';
+        if (item.signId === 'red_man_custom') {
+          signHtml = `<div class="my-2 inline-flex items-center gap-2 bg-slate-900 px-3 py-2 rounded-xl">
+            <div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white font-black">🧍</div>
+            <span class="text-xs text-red-300 font-bold">紅色人像亮着</span>
+          </div>`;
+        } else if (item.signId) {
+          const sObj = trafficSigns.find(s => s.id === item.signId);
+          if (sObj) signHtml = `<div class="my-2">${sObj.svg}</div>`;
+        }
+        return `
+          <div id="ex-p3-card-${qIdx}" class="bg-white p-4 rounded-2xl border-2 border-emerald-200">
+            <div class="flex items-start justify-between gap-3">
+              <div class="font-black text-base text-slate-800 leading-relaxed">${item.q}</div>
+              <button onclick="speakExamP3Question(${qIdx}, this)" class="touch-btn shrink-0 bg-amber-300 hover:bg-amber-400 text-slate-900 font-black px-3.5 py-2 rounded-2xl text-xs sm:text-sm shadow flex items-center gap-1">
+                <span>🗣️</span><span>讀題目</span>
+              </button>
+            </div>
+            ${signHtml}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2.5">
+              ${item.options.map((opt, oIdx) => `
+                <div class="flex items-stretch gap-1">
+                  <button onclick="selectExamP3(${qIdx}, ${oIdx})"
+                          class="flex-1 touch-btn p-2.5 rounded-xl text-left text-sm font-bold border-2 ${userExamAnswers.p3[qIdx] === oIdx ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-800 border-slate-200'}">
+                    ${opt}
+                  </button>
+                  <button onclick="speakCantonese('${opt.replace(/'/g, "\\'")}', this)" aria-label="單獨讀出此選項" class="touch-btn px-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-slate-800 text-xs font-black">
+                    🔊
+                  </button>
+                </div>
+              `).join('')}
+            </div>
+            <div id="ex-p3-fb-${qIdx}" class="text-xs font-black mt-2"></div>
+          </div>
+        `;
+      }).join('');
+
+      // 第四部分
+      document.getElementById('exam-part4-container').innerHTML = examPart4TF.map((item, tIdx) => `
+        <div id="ex-p4-card-${tIdx}" class="bg-white p-4 rounded-2xl border-2 border-purple-200 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5">
+            <span class="text-2xl">${item.icon}</span>
+            <span class="font-black text-sm sm:text-base text-slate-800">${item.text}</span>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="speakExamP4Question(${tIdx}, this)" aria-label="讀出判斷題" class="touch-btn px-3 h-12 rounded-2xl bg-amber-300 hover:bg-amber-400 text-slate-900 font-black text-xs shadow flex items-center gap-1">
+              <span>🗣️</span><span class="hidden sm:inline">讀題</span>
+            </button>
+            <button onclick="selectExamP4(${tIdx}, true)"
+                    class="touch-btn w-12 h-12 rounded-2xl font-black text-xl border-2 ${userExamAnswers.p4[tIdx] === true ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-emerald-700 border-emerald-300'}">✓</button>
+            <button onclick="selectExamP4(${tIdx}, false)"
+                    class="touch-btn w-12 h-12 rounded-2xl font-black text-xl border-2 ${userExamAnswers.p4[tIdx] === false ? 'bg-rose-600 text-white border-rose-600' : 'bg-slate-50 text-rose-700 border-rose-300'}">✗</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectExamP1(id, val) {
+      playClickSound();
+      userExamAnswers.p1[id] = val;
+      renderFullExam();
+      if (autoReadNext) {
+        const idx = examPart1Data.findIndex(x => x.id === id);
+        if (idx >= 0 && idx + 1 < examPart1Data.length) {
+          speakExamP1(examPart1Data[idx + 1].id);
+        }
+      }
+    }
+    function selectExamP2(key, val) {
+      playClickSound();
+      userExamAnswers.p2[key] = val;
+    }
+    function selectExamP3(qIdx, oIdx) {
+      playClickSound();
+      userExamAnswers.p3[qIdx] = oIdx;
+      renderFullExam();
+      if (autoReadNext && qIdx + 1 < examPart3MC.length) {
+        speakExamP3Question(qIdx + 1);
+      }
+    }
+    function selectExamP4(tIdx, val) {
+      playClickSound();
+      userExamAnswers.p4[tIdx] = val;
+      renderFullExam();
+      if (autoReadNext && tIdx + 1 < examPart4TF.length) {
+        speakExamP4Question(tIdx + 1);
+      }
+    }
+
+    function resetFullExam() {
+      playClickSound();
+      stopCantonese();
+      examSubmitted = false;
+      userExamAnswers = { p1: {}, p2: {}, p3: {}, p4: {} };
+      document.getElementById('exam-result-banner').classList.add('hidden');
+      renderFullExam();
+    }
+
+    function submitFullExam() {
+      examSubmitted = true;
+      let score = 0;
+
+      // 批改第一部分 (4分)
+      examPart1Data.forEach(item => {
+        const isOk = userExamAnswers.p1[item.id] === item.ans;
+        if (isOk) score++;
+        const card = document.getElementById(`ex-p1-card-${item.id}`);
+        const fb = document.getElementById(`ex-p1-fb-${item.id}`);
+        card.className = `bg-white p-3.5 rounded-2xl border-2 ${isOk ? 'border-emerald-500' : 'border-rose-500'} space-y-2`;
+        fb.className = `text-xs font-black flex items-center justify-between ${isOk ? 'text-emerald-700' : 'text-rose-700'}`;
+        const explainStr = isOk ? `紅圈 ${item.id} 答對了，正是${item.ans}。` : `紅圈 ${item.id} 的正確答案是${item.ans}。`;
+        fb.innerHTML = `<span>${isOk ? '✅ 正確！' : `❌ 正確答案：${item.ans}`}</span><button onclick="speakCantonese('${explainStr}', this)" class="bg-amber-200 text-slate-900 px-2 py-0.5 rounded-lg">🗣️ 讀解析</button>`;
+      });
+
+      // 批改第二部分 (8分)
+      examPart2Groups.forEach((grp, gIdx) => {
+        grp.items.forEach((it, iIdx) => {
+          const key = `${gIdx}-${iIdx}`;
+          const isOk = userExamAnswers.p2[key] === it.ans;
+          if (isOk) score++;
+          const card = document.getElementById(`ex-p2-card-${key}`);
+          const fb = document.getElementById(`ex-p2-fb-${key}`);
+          card.className = `p-3 rounded-2xl bg-slate-50 border-2 ${isOk ? 'border-emerald-500' : 'border-rose-500'} flex items-center gap-3`;
+          fb.className = `text-xs font-black flex items-center justify-between gap-1 ${isOk ? 'text-emerald-700' : 'text-rose-700'}`;
+          const explainStr = isOk ? `配對正確，${it.ans}。` : `正確答案是：${it.ans}。`;
+          fb.innerHTML = `<span>${isOk ? '✅ 配對正確！' : `❌ 正確答案：${it.ans}`}</span><button onclick="speakCantonese('${explainStr}', this)" class="shrink-0 bg-amber-200 text-slate-900 px-2 py-0.5 rounded-lg">🗣️ 讀解析</button>`;
+        });
+      });
+
+      // 批改第三部分 (10分)
+      examPart3MC.forEach((item, qIdx) => {
+        const isOk = userExamAnswers.p3[qIdx] === item.ans;
+        if (isOk) score++;
+        const card = document.getElementById(`ex-p3-card-${qIdx}`);
+        const fb = document.getElementById(`ex-p3-fb-${qIdx}`);
+        card.className = `bg-white p-4 rounded-2xl border-2 ${isOk ? 'border-emerald-500' : 'border-rose-500'}`;
+        fb.className = `text-xs font-black mt-2 flex items-center justify-between ${isOk ? 'text-emerald-700' : 'text-rose-700'}`;
+        const ansText = item.options[item.ans];
+        const explainStr = isOk ? `第 ${qIdx + 1} 題答對了，答案是 ${ansText}` : `第 ${qIdx + 1} 題正確答案是 ${ansText}`;
+        fb.innerHTML = `<span>${isOk ? '✅ 答對了！' : `❌ 正確答案：${ansText}`}</span><button onclick="speakCantonese('${explainStr.replace(/'/g, "\\'")}', this)" class="bg-amber-200 text-slate-900 px-2.5 py-1 rounded-lg">🗣️ 讀解析</button>`;
+      });
+
+      // 批改第四部分 (8分)
+      examPart4TF.forEach((item, tIdx) => {
+        const isOk = userExamAnswers.p4[tIdx] === item.ans;
+        if (isOk) score++;
+        const card = document.getElementById(`ex-p4-card-${tIdx}`);
+        card.className = `bg-white p-4 rounded-2xl border-2 ${isOk ? 'border-emerald-500 bg-emerald-50/40' : 'border-rose-500 bg-rose-50/40'} flex items-center justify-between gap-2`;
+      });
+
+      // 顯示總成績與徽章
+      const banner = document.getElementById('exam-result-banner');
+      banner.classList.remove('hidden');
+      const scoreTitle = `你的專章模擬考成績：${score} / 30 分`;
+      document.getElementById('exam-score-title').textContent = scoreTitle;
+
+      let msgText = '';
+      if (score >= 27) {
+        playSuccessSound();
+        addStar('exam-master', 5);
+        document.getElementById('exam-badge-emoji').textContent = '🥇⭐⭐⭐';
+        msgText = '太優秀了！你已完全掌握香港交通安全隊《道路安全專章》所有知識，準備好考取專章啦！(+5⭐)';
+      } else if (score >= 20) {
+        playSuccessSound();
+        addStar('exam-pass', 3);
+        document.getElementById('exam-badge-emoji').textContent = '🥈⭐⭐';
+        msgText = '成績很好！已達到合格水平，看看下方紅色框的錯題解析再複習一下就滿分了！(+3⭐)';
+      } else {
+        playErrorSound();
+        document.getElementById('exam-badge-emoji').textContent = '💪⭐';
+        msgText = '加油！請先看看下方紅色框的正確答案，或回到第一至四站重溫互動模擬再挑戰一次！';
+      }
+      document.getElementById('exam-score-msg').textContent = msgText;
+      speakCantonese(`${scoreTitle}。${msgText}`);
+
+      banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // =========================================================
+    // 8. 頁面載入初始化
+    // =========================================================
+    window.onload = function () {
+      renderPedestrianCards();
+      updateVisibilitySim();
+      // 預設顯示紅燈規則（不自動發出聲音以免瀏覽器阻擋，待點擊播放）
+      currentSignal = 'red';
+      document.getElementById('lamp-red').style.opacity = '1';
+      document.getElementById('lamp-red').style.filter = 'drop-shadow(0 0 14px #ef4444)';
+      document.getElementById('lamp-green').style.opacity = '0.2';
+      document.getElementById('signal-rule-box').innerHTML = `
+        <div class="font-black text-lg text-red-700">🛑 「紅色人像燈」亮着時：</div>
+        <ul class="list-disc pl-5 font-bold text-sm sm:text-base space-y-1 text-red-950">
+          <li>不可橫過或開始橫過馬路，應站在行人路的過路處等候。</li>
+          <li><strong>即使馬路上沒有車輛行駛，仍然需要等候，不可橫過馬路！</strong></li>
+        </ul>`;
+      showFacilityDetail('zebra');
+      renderRulesGame();
+      renderSignsGallery('all');
+      initSignMatchGame();
+      selectVehicle('bus');
+      renderFullExam();
+    };
+  </script>
+</body>
+</html>
